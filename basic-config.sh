@@ -7,17 +7,17 @@ check_sudo() {
 
 if ! check_sudo $USER; then
     echo "[!] L'usuari $USER no està al grup sudo."
-    echo "[?] Introduïu la contrasenya de ROOT per afegir-lo:"
+    echo "[?] Introduïu la contrasenya de ROOT per afegir-lo"
     
     # Utilitzem 'su' només per a aquesta acció específica
-    su -c "apt update && apt install -y sudo && usermod -aG sudo $USER" root
+    su -c "/usr/sbin/usermod -aG sudo $USER" root
     
-    echo "[OK] Usuari afegit a sudoers."
-    echo "[!] ATENCIÓ: Has de tancar la sessió ('exit')i tornar a entrar perquè els canvis s'apliquin. Un cop fet això, torna a executar aquest script per completar la instal·lació."
+    echo "[OK] Usuari $USER afegit a sudoers."
+    echo "[!] ATENCIÓ: Cal reiniciar el servidor i tornar a entrar perquè els canvis s'apliquin. Un cop fet això, torna a executar aquest script per completar la instal·lació."
     exit 0
 fi
 
-echo "--- Iniciant instal·lació amb l'usuari: $USER ---"
+echo "--- Iniciant instal·lació de paquets amb l'usuari: $USER ---"
 
 # Funció d'instal·lació segura de paquets
 install_if_missing() {
@@ -28,13 +28,17 @@ install_if_missing() {
         echo "[OK] $1 ja està instal·lat."
     fi
 }
-a
+
+echo "[INFO] Actualitzant la llista de paquets..."
 sudo apt update
+
 PACKAGES=("git" "openssh-server")
 
 for package in "${PACKAGES[@]}"; do
     install_if_missing "$package"
 done
+
+echo "--- Finalitzada instal·lació de paquets ---"
 
 # Gestió d'usuaris
 while true; do
@@ -44,15 +48,19 @@ while true; do
         if id "$new_user" &>/dev/null; then
             echo "[!] L'usuari $new_user ja existeix."
         else
-            sudo adduser "$new_user"
+            sudo adduser --gecos "" "$new_user"
             echo "[OK] Usuari $new_user creat correctament."
 
             read -p "[?] Vols afegir $new_user al grup sudo? (s/n): " add_sudo
-            if check_sudo "$new_user"; then
-                echo "[INFO] $new_user ja té permisos de sudo."
+            if [[ "$add_sudo" == "s" ]]; then
+                if check_sudo "$new_user"; then
+                    echo "[INFO] $new_user ja té permisos de sudo."
+                else
+                    sudo usermod -aG sudo "$new_user"
+                    echo "[OK] Afegit al grup sudo."
+                fi
             else
-                sudo usermod -aG sudo "$new_user"
-                echo "[OK] Afegit al grup sudo."
+                echo "[INFO] $new_user no s'ha afegit al grup sudo."
             fi
         fi
     elif [[ "$add_user" == "n" ]]; then
@@ -64,8 +72,9 @@ while true; do
 done
 
 # Configuració del servei SSH 
-sudo systemctl enable --now ssh
 
+echo "[INFO] Habilitant i iniciant el servei SSH..."
+sudo systemctl enable --now ssh
 echo "[OK] Servei SSH habilitat i en execució."
 
 while true; do
