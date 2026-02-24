@@ -28,7 +28,7 @@ install_if_missing() {
         echo "[OK] $1 ja està instal·lat."
     fi
 }
-
+a
 sudo apt update
 PACKAGES=("git" "openssh-server")
 
