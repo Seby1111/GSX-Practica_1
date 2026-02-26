@@ -16,9 +16,10 @@ else
     echo "[OK] Nginx està habilitat."
 fi
 
-if ! [ -x "$(command -v nginx)" ]; then
-    echo "[!] Nginx no està instal·lat. Executa el script de configuració bàsica abans d'executar aquest script."
-    exit 1
-else
-    echo "[OK] Nginx està instal·lat i actiu."
+# Comprova si Nginx se reinicia automàticament en cas de fallada i, si no ho fa, afegeix la clausula "Restart=always" en l'apartat de [Service] del fitxer de servei de Nginx.
+if ! [ cat /lib/systemd/system/nginx.service | grep -q "Restart=always" ]; then
+    echo "[!] Nginx no té Restart=always. Afegint..."
+    sudo sed -i '/\[Service\]/a Restart=always' /lib/systemd/system/nginx.service
+    sudo systemctl daemon-reload
+    sudo systemctl restart nginx.service
 fi
