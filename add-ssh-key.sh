@@ -1,6 +1,8 @@
 #!/bin/bash
 
 read -p "Introdueix la IP del servidor: " host_ip
+read -p "Introdueix el port del servidor (deixa-ho en blanc per defecte 22): " host_port
+host_port=${host_port:-22}
 
 if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
     echo "[INFO] No s'ha trobat cap clau SSH. Creant una nova clau SSH..."
@@ -13,7 +15,7 @@ fi
 echo "[INFO] Copiant la clau SSH pública al servidor remot..."
 read -p "Introdueix el nom d'usuari remot per copiar la clau SSH: " remote_user
 
-if ssh-copy-id -o "StrictHostKeyChecking=accept-new" -i ~/.ssh/id_ed25519.pub $remote_user@$host_ip; then
+if ssh-copy-id -o "StrictHostKeyChecking=accept-new" -i ~/.ssh/id_ed25519.pub -p $host_port $remote_user@$host_ip; then
     echo "[OK] Clau SSH copiada correctament a $remote_user@$host_ip."
 else
     echo "[ERROR] No s'ha pogut copiar la clau SSH a $remote_user@$host_ip. Comprova les credencials i la connexió de xarxa."
