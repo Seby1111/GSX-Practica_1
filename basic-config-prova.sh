@@ -5,15 +5,21 @@ check_sudo() {
     groups $1 | grep -q "\bsudo\b"
 }
 
+sudo > /dev/null 2>/dev/null
+
+if [[ $? -ne 0 ]]; then
+    echo "[!] Sudo no esta instal·lat. Necessitem permisos de sudo per continuar."
+    echo "[?] Introduïu la contrasenya de ROOT per instal·lar sudo:"
+    su -c "apt update && apt install -y sudo" root
+fi
+
 if ! check_sudo $USER; then
     echo "[!] L'usuari $USER no està al grup sudo."
     echo "[?] Introduïu la contrasenya de ROOT per afegir-lo:"
-    
-    # Utilitzem 'su' només per a aquesta acció específica
-    su -c "apt update && apt install -y sudo && usermod -aG sudo $USER" root
-    
-    echo "[OK] Usuari afegit a sudoers."
-    echo "[!] ATENCIÓ: Has de tancar la sessió ('exit')i tornar a entrar perquè els canvis s'apliquin. Un cop fet això, torna a executar aquest script per completar la instal·lació."
+    su -c "/usr/sbin/usermod -aG sudo $USER" root
+
+    echo "[OK] Usuari $USER afegit a sudoers."
+    echo "[!] ATENCIÓ: Has de tancar la sessió ('exit') i tornar a entrar perquè els canvis s'apliquin. Un cop fet això, torna a executar aquest script per completar la instal·lació."
     exit 0
 fi
 
@@ -64,7 +70,17 @@ while true; do
 done
 
 # Configuració del servei SSH 
-sudo systemctl enable --now ssh
+
+echo "[INFO] Deshabilitant l'autenticació per contrasenya a SSH..."
+sudo sed -i 's/.*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+echo "[INFO] Deshabilitant l'accés directe de root a SSH..."
+sudo sed -i 's/.*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+echo "[INFO Canviant el port de SSH a 2222..."
+sudo sed -i 's/.*Port 22.*/Port 2222/' /etc/ssh/sshd_config
+
+
+sudo systemctl enable ssh
+sudo systemctl restart ssh
 
 echo "[OK] Servei SSH habilitat i en execució."
 
