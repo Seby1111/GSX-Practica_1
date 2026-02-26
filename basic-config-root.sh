@@ -1,3 +1,5 @@
+#!/bin/bash
+
 add_user() {
     if id "$1" &>/dev/null; then
         echo "[!] L'usuari $1 ja existeix."

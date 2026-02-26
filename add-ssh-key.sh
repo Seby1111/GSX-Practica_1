@@ -1,3 +1,5 @@
+#!/bin/bash
+
 read -p "Introdueix la IP del servidor: " host_ip
 
 if [ ! -f "$HOME/.ssh/id_ed25519" ]; then
