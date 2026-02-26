@@ -1,3 +1,5 @@
+#!/bin/bash
+
 install_if_missing() {
     if ! dpkg -l | grep -q "^ii  $1 "; then
         echo "[INFO] Instal·lant $1..."
