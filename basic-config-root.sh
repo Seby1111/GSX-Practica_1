@@ -5,7 +5,7 @@ add_user() {
         echo "[!] L'usuari $1 ja existeix."
     else
         echo "[INFO] Creant usuari $1..."
-        useradd -m "$1"
+        useradd -m -s /bin/bash "$1"
         echo "$1:milax" | chpasswd
         chage -d 0 "$1"
 
