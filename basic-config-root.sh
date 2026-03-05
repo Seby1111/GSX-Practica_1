@@ -33,6 +33,32 @@ for user in "${USERS[@]}"; do
     add_user "$user"
 done
 
+for user_dir in /home/*; do
+    [ -d "$user_dir" ] || continue # Si no és un directori, ignora'l
+    
+    username=$(basename "$user_dir")
+    is_allowed=false
+    
+    # Comprovem si l'usuari del directori està a la llista d'autoritzats
+    for allowed in "${USERS[@]}"; do
+        if [[ "$username" == "$allowed" ]]; then
+            is_allowed=true
+            break
+        fi
+    done
+    
+    # Si no està autoritzat, l'esborrem
+    if [ "$is_allowed" = false ]; then
+        echo "[INFO] Esborrant usuari sobrant: $username..."
+        
+        # Matem processos restants de l'usuari per si de cas
+        pkill -u "$username" 2>/dev/null
+        
+        # L'esborrem amb la seva carpeta personal
+        deluser --remove-home "$username" && echo "[OK] Usuari $username eliminat." || echo "[!] Error eliminant $username."
+    fi
+done
+
 echo "[INFO] Actualitzant repositoris..."
 apt update
 
