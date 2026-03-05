@@ -5,6 +5,10 @@ SOURCE_FILES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
 DATE=$(date +%Y%m%d)
 OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
 
+echo "[INFO] Verificant directori de backup..."
+sudo mkdir -p "$BACKUP_DIR"
+sudo chown backupuser:backupuser "$BACKUP_DIR"
+
 echo "[INFO] Iniciant el backup de dades sensibles..."
 
 read -sp "[*] Introdueix la contrasenya per encriptar el backup: " PASSPHRASE
