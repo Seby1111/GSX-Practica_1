@@ -5,6 +5,11 @@ SOURCE_FILES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
 DATE=$(date +%Y%m%d)
 OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
 
+if ! id "backupuser" &>/dev/null; then
+    echo "[INFO] Creant usuari especific per als backups (backupuser)..."
+    sudo useradd -r -s /usr/sbin/nologin backupuser
+fi
+
 echo "[INFO] Verificant directori de backup..."
 sudo mkdir -p "$BACKUP_DIR"
 sudo chown backupuser:backupuser "$BACKUP_DIR"
