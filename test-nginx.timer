@@ -1,0 +1,9 @@
+[Unit]
+Description=Timer diari per comprovar Nginx
+
+[Timer]
+OnCalendar=daily
+Unit=test-nginx.service
+
+[Install]
+WantedBy=timers.target
