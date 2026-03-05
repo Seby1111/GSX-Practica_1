@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BACKUP_DIR="/opt/backup"
+SOURCE_FILES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
+DATE=$(date +%Y%m%d)
+OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
+
+echo "[INFO] Iniciant el backup de dades sensibles..."
+
+read -sp "[*] Introdueix la contrasenya per encriptar el backup: " PASSPHRASE
+
+tar -cpzvf "$OUTPUT_FILE" "${SOURCE_FILES[@]}" 2>/dev/null
+
+echo "[INFO] Encriptant el fitxer de backup..."
+gpg --batch --yes --passphrase "$PASSPHRASE" -c "$OUTPUT_FILE"
+
+# 3. Neteja: Esborrem el tar sense encriptar per seguretat
+rm -f "$OUTPUT_FILE"
+
+echo "[OK] Backup completat i encriptat: ${OUTPUT_FILE}.gpg"
