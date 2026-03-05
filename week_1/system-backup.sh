@@ -1,29 +1,51 @@
 #!/bin/bash
 
-BACKUP_DIR="/opt/backup"
-SOURCE_FILES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
+BACKUP_DIR="/var/backups"
+SOURCES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
 DATE=$(date +%Y%m%d)
 OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
+PASSPHRASE="milax"
 
-if ! id "backupuser" &>/dev/null; then
-    echo "[INFO] Creant usuari especific per als backups (backupuser)..."
-    sudo useradd -r -s /usr/sbin/nologin backupuser
+EXISTING_SOURCES=()
+for src in "${SOURCES[@]}"; do
+    if [ -d "$src" ] || [ -f "$src" ]; then
+        EXISTING_SOURCES+=("$src")
+    else
+        echo "[!] La ruta $src no existeix, s'ignorarà."
+    fi
+done
+
+if [ ${#EXISTING_SOURCES[@]} -eq 0 ]; then
+    echo "[ERROR] No s'ha trobat cap de les rutes especificades. Avortant backup..."
+    exit 1
 fi
 
-echo "[INFO] Verificant directori de backup..."
-sudo mkdir -p "$BACKUP_DIR"
-sudo chown backupuser:backupuser "$BACKUP_DIR"
+echo "[INFO] Iniciant el backup de: ${EXISTING_SOURCES[*]}"
 
-echo "[INFO] Iniciant el backup de dades sensibles..."
+if ! id "backupuser" &>/dev/null; then
+    echo "[ERROR] L'usuari 'backupuser' no existeix. Executa primer l'script directory-structre.sh"
+    exit 1
+fi
 
-read -sp "[*] Introdueix la contrasenya per encriptar el backup: " PASSPHRASE
+if [ ! -w "$BACKUP_DIR" ]; then
+    echo "[ERROR] No es pot escriure a $BACKUP_DIR o el directori no existeix."
+    exit 1
+fi
 
-tar -cpzvf "$OUTPUT_FILE" "${SOURCE_FILES[@]}" 2>/dev/null
+if tar -cpzPf "$OUTPUT_FILE" "${EXISTING_SOURCES[@]}"; then
+    echo "[OK] Fitxer comprimit creat correctament."
 
-echo "[INFO] Encriptant el fitxer de backup..."
-gpg --batch --yes --passphrase "$PASSPHRASE" -c "$OUTPUT_FILE"
-
-# 3. Neteja: Esborrem el tar sense encriptar per seguretat
-rm -f "$OUTPUT_FILE"
+    echo "[INFO] Encriptant el fitxer de backup..."
+    if gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" -c "$OUTPUT_FILE"; then
+        echo "[OK] Backup encriptat correctament."
+        rm -f "$OUTPUT_FILE"
+    else
+        echo "[ERROR] L'encriptació ha fallat."
+        exit 1
+    fi
+else
+    echo "[ERROR] El tar ha fallat."
+    exit 1
+fi
 
 echo "[OK] Backup completat i encriptat: ${OUTPUT_FILE}.gpg"
