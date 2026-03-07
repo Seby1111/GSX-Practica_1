@@ -19,7 +19,7 @@ if ! systemctl status "$SERVICE" &> /dev/null; then
 fi
 
 # Obtenemos el número de logs en los últimos MINUTES minutos
-RECENT_LOGS=$(journalctl -u "$SERVICE" --since "$MINUTES min ago" --no-pager | wc -l)
+RECENT_LOGS=$(sudo journalctl -u "$SERVICE" --since "$MINUTES min ago" --no-pager | wc -l)
 
 # Mensaje según haya o no logs recientes
 if [ "$RECENT_LOGS" -gt 0 ]; then
@@ -28,7 +28,7 @@ else
     echo "WARNING: No logs found in the last $MINUTES minutes for $SERVICE"
 fi
 
-ERROR_LOGS=$(journalctl -u "$SERVICE" --since "$MINUTES min ago" --no-pager | grep -Ei 'fail|error|crit|emerg')
+ERROR_LOGS=$(sudo journalctl -u "$SERVICE" --since "$MINUTES min ago" --no-pager | grep -Ei 'fail|error|crit|emerg')
 
 if [ -n "$ERROR_LOGS" ]; then
     echo "WARNING: Error logs detected in the last $MINUTES minutes for $SERVICE"

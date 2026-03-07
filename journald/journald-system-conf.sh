@@ -4,7 +4,7 @@
 JOURNAL_CONF="/etc/systemd/journald.conf"
 
 # Backup del archivo original
-cp "$JOURNAL_CONF" "${JOURNAL_CONF}.bak"
+sudo cp "$JOURNAL_CONF" "${JOURNAL_CONF}.bak"
 echo "Backup creado en ${JOURNAL_CONF}.bak"
 
 # Función para actualizar un valor
@@ -14,7 +14,7 @@ update_journal_conf() {
 
     # Si la linea está comentada o existe, reemplaza; si no existe, la agrega
     if grep -q "^#\?$key=" "$JOURNAL_CONF"; then
-        sed -i "s|^#\?$key=.*|$key=$value|" "$JOURNAL_CONF"
+        sudo sed -i "s|^#\?$key=.*|$key=$value|" "$JOURNAL_CONF"
     else
         echo "$key=$value" >> "$JOURNAL_CONF"
     fi

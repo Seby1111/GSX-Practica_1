@@ -78,6 +78,7 @@ Description=Comprovacio diaria de Nginx
 Type=oneshot
 ExecStart=/usr/local/bin/test-nginx.sh
 EOF
+fi
 
 arxiu="/etc/systemd/system/test-nginx.timer"
 
@@ -99,6 +100,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable test-nginx.timer
 sudo systemctl start test-nginx.timer
+fi
 
 # Comprova si nginx existeix com a servici en systemd
 if systemctl list-unit-files | grep -q "test-nginx.service"; then
