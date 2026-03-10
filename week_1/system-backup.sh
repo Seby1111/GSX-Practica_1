@@ -1,7 +1,7 @@
 #!/bin/bash
 
 BACKUP_DIR="/var/backups/system_backups"
-SOURCES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
+SOURCES=("/etc/configs" "/opt/scripts")
 DATE=$(date +%Y%m%d)
 OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
 PASSPHRASE="milax"
@@ -36,7 +36,7 @@ if tar -cpzPf "$OUTPUT_FILE" "${EXISTING_SOURCES[@]}"; then
     echo "[OK] Fitxer comprimit creat correctament."
 
     echo "[INFO] Encriptant el fitxer de backup..."
-    if gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" -c "$OUTPUT_FILE"; then
+    if GNUPGHOME=/tmp/.gnupg gpg --batch --yes --pinentry-mode loopback --passphrase "$PASSPHRASE" -c "$OUTPUT_FILE"; then
         echo "[OK] Backup encriptat correctament."
         rm -f "$OUTPUT_FILE"
     else
