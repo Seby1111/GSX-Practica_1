@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BACKUP_DIR="/var/backups"
+BACKUP_DIR="/var/backups/system_backups"
 SOURCES=("/etc/configs" "/opt/scripts" "/home/eusebiu/GSX-Practica_1")
 DATE=$(date +%Y%m%d)
 OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
