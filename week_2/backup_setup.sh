@@ -18,7 +18,7 @@ if [ -f "../week_1/system-backup.sh" ]; then
     echo "[INFO] Assignant /opt/backup/backup.sh a backupuser"
     sudo chown backupuser:backupuser /opt/backup/backup.sh
 else
-    echo "[ERROR] No s'ha trobat l'script setup-packager.sh"
+    echo "[ERROR] No s'ha trobat l'script system-backup.sh"
     exit 1
 fi
 
@@ -68,6 +68,6 @@ EOF
 echo "[INFO] Recarregnat els serveis..."
 sudo systemctl daemon-reload
 echo "[INFO] Activant l'arrancada automatica del backup.timer..."
-sudo systemctl enable backup.timer
+sudo systemctl enable --now backup.timer
 
 echo "[OK] Servei de backup i timer configurats correctament."
