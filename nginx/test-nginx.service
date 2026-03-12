@@ -1,0 +1,6 @@
+[Unit]
+Description=Comprovacio diaria de Nginx
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/test-nginx.sh
