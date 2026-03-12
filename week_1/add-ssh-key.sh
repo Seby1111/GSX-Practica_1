@@ -15,7 +15,7 @@ fi
 echo "[INFO] Copiant la clau SSH pública al servidor remot..."
 read -p "Introdueix el nom d'usuari remot per copiar la clau SSH: " remote_user
 
-if ssh-copy-id -o "StrictHostKeyChecking=accept-new" -i ~/.ssh/id_ed25519.pub -p $host_port $remote_user@$host_ip; then
+if ssh -p "$host_port" -o "StrictHostKeyChecking=accept-new" "$remote_user@$host_ip" "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$PUB_KEY' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"; then
     echo "[OK] Clau SSH copiada correctament a $remote_user@$host_ip."
 else
     echo "[ERROR] No s'ha pogut copiar la clau SSH a $remote_user@$host_ip. Comprova les credencials i la connexió de xarxa."
