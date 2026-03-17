@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Comprovem si l'script s'executa com a root
+if [[ $EUID -ne 0 ]]; then
+   echo "[!] Aquest script s'ha d'executar com a root (fent servir sudo)."
+   exit 1
+fi
+
 add_user() {
     if id "$1" &>/dev/null; then
         echo "[!] L'usuari $1 ja existeix."
