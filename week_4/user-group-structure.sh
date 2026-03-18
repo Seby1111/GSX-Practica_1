@@ -33,7 +33,11 @@ add_user() {
 echo "[INFO] Creant grup 'greendevcorp'..."
 groupadd -f greendevcorp
 
+echo "[OK] Grup 'greendevcorp' creat correctament."
+
 USERS=("dev1" "dev2" "dev3" "dev4")
+
+echo "[INFO] Afegint usuaris ${USERS[@]}"
 
 for user in "${USERS[@]}"; do
     add_user "$user"
