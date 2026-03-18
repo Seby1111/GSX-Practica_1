@@ -1,8 +1,9 @@
 #!/bin/bash
 
-if [ "$EUID" -ne 0 ]; then 
-  echo "Si us plau, executa aquest script com a root o fent servir sudo."
-  exit 1
+# Comprovem si l'script s'executa com a root
+if [[ $EUID -ne 0 ]]; then
+   echo "[!] Aquest script s'ha d'executar com a root (fent servir sudo)."
+   exit 1
 fi
 
 echo "[INFO] Creant i configurant el directori /home/greendevcorp/bin..."
