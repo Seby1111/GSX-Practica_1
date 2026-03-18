@@ -12,14 +12,14 @@ echo "[INFO] Configurant límits de recursos via PAM..."
 cat <<EOF > /etc/security/limits.d/user_limits.conf
 #<domain>      <type>  <item>         <value>
 
-@greendevcorp soft    cpu             20          # 20 minuts CPU (avís)
-@greendevcorp hard    cpu             30          # 30 minuts CPU (tall)
-@greendevcorp soft    as              1024000     # 1GB Memòria Virtual
-@greendevcorp hard    as              2048000     # 2GB Memòria Virtual
-@greendevcorp soft    nproc           100         # 100 processos
-@greendevcorp hard    nproc           150         # 150 processos
-@greendevcorp soft    nofile          512         # 512 fitxers oberts
-@greendevcorp hard    nofile          1024        # 1024 fitxers oberts
+@greendevcorp soft    cpu             20          
+@greendevcorp hard    cpu             30          
+@greendevcorp soft    as              1024000     
+@greendevcorp hard    as              2048000     
+@greendevcorp soft    nproc           100         
+@greendevcorp hard    nproc           150         
+@greendevcorp soft    nofile          512         
+@greendevcorp hard    nofile          1024        
 EOF
 
 # Verificació de PAM

@@ -9,17 +9,28 @@ USUARI_ACTUAL=$(whoami)
 
 # Comprovar si l'usuari pertany al grup
 if ! groups "$USUARI_ACTUAL" | grep -q "\b$GRUP_LIMIT\b"; then
+    EXEMPLE_USER=$(getent group "$GRUP_LIMIT" | cut -d: -f4 | cut -d, -f1)
+    [[ -z "$EXEMPLE_USER" ]] && EXEMPLE_USER="nom_usuari_dev"
+    
     echo "------------------------------------------------------------"
     echo "[!] ATENCIÓ: L'usuari '$USUARI_ACTUAL' NO pertany al grup '$GRUP_LIMIT'."
     echo "[!] Els límits de PAM no s'aplicaran i el test NO serà vàlid."
     echo "------------------------------------------------------------"
-    echo "[*] Consell: Executa l'script així: sudo -u dev1 -i -c $0"
+    echo "[*] Consell per executar el test correctament:"
+    echo ""
+    echo "  1. Copia l'script a una zona pública:"
+    echo "     cp $0 /tmp/test-unificat.sh"
+    echo ""
+    echo "  2. Dona permisos d'execució:"
+    echo "     chmod +x /tmp/test-unificat.sh"
+    echo ""
+    echo "  3. Executa com a usuari del grup (ex: $EXEMPLE_USER):"
+    echo "     sudo -u $EXEMPLE_USER -i /tmp/test-unificat.sh"
     echo "------------------------------------------------------------"
     exit 1
 fi
 
 echo "[OK] Usuari '$USUARI_ACTUAL' validat. Començant el test..."
-# ... aquí aniria la resta del teu script de test ...
 
 echo "====================================================="
 echo "[*] VALIDACIÓ DE CONFIGURACIÓ PAM (Usuari: $USER)"
@@ -29,54 +40,75 @@ echo "====================================================="
 echo -e "\n[INFO] Límits detectats segons PAM:"
 ulimit -Sa | grep -E "open files|max user processes|virtual memory|cpu time"
 
-# Test de fitxers
-echo -e "\n[TEST] Comprovant límit de fitxers de PAM..."
-fds=()
-for i in {1..4000}; do
-    if exec {fd}> /dev/null 2>/dev/null; then
-        fds+=($fd)
-    else
-        echo "    -> [OK] PAM ha bloquejat l'obertura al fitxer nº: $i"
-        break
-    fi
-done
+test_nofile() {
+    echo "[TEST] Obrint fitxers fins al límit..."
+    local i=0
 
-# Tanquem els fitxers
-for f in "${fds[@]}"; do exec {f}>&- 2>/dev/null; done
+    while true; do
+        if exec {fd}> /dev/null 2>/dev/null; then
+            ((i++))
+            echo -ne "Fitxers oberts: $i\r"
+        else
+            echo -e "\n[OK] El sistema ha bloquejat l'obertura a l'intent: $i"
+            break
+        fi
+    done
+}
 
-# Test de memoria
-echo -e "\n[TEST] Comprovant límit de memòria de PAM..."
-mem_data=""
-for i in {1..20}; do
-    # Intentem afegir blocs de 100MB
-    if chunk=$(printf '%104857600s' ' ' 2>/dev/null); then
-        mem_data="${mem_data}${chunk}"
-        echo "    ... Memòria en ús: $((i * 100)) MB"
-    else
-        echo "    -> [OK] PAM ha restringit la memòria correctament."
-        break
-    fi
-done
+test_nproc() {
+    echo "[TEST] Iniciant prova de límit de processos (nproc)..."
+    
+    local i=0
 
+    while true; do
+        # 1. Creem un procés que morirà tot sol en 10 segons.
+        # No necessitem guardar el seu PID ni matar-lo després.
+        sleep 10 &
+        
+        # 2. Si el sistema bloqueja la creació, sortim del bucle.
+        if [ $? -ne 0 ]; then
+            break
+        fi
+        
+        ((i++))
+        echo -ne "Processos actius creats: $i\r"
+        sleep 0.01
+    done
+}
 
-# Test de processos
-trap 'builtin kill $(jobs -p) 2>/dev/null' EXIT
+test_memoria() {
+    echo "[TEST] Omplint memòria virtual (as) fins al límit..."
+    
+    local i=0
+    local d=""
+    local bloc=$(printf '%52428800s' ' ') # Creem UN bloc de 50MB a la memòria
 
-echo -e "\n[TEST] Comprovant límit de processos de PAM..."
-count=0
-# Fem un bucle prou gran per superar qualsevol límit normal
-for i in {1..2000}; do
-    sleep 100 & 2>/dev/null
-    if [ $? -ne 0 ]; then
-        echo "    -> [OK] PAM ha bloquejat la creació al procés nº: $i"
-        break
-    fi
-    count=$i
-    echo -ne "    ... creats: $count\r"
-    sleep 0.02
-done
+    while true; do
+        # Intentem afegir el bloc de 50MB a la variable principal
+        if d="${d}${bloc}" 2>/dev/null; then
+            ((i++))
+            # Mostrem el total acumulat
+            echo -ne "Memòria virtual ocupada: $((i * 50)) MB\r"
+        else
+            echo -e "\n\n[OK] LÍMIT PAM (as) ASSOLIT!"
+            echo "[INFO] El procés ha fallat en intentar superar els $((i * 50)) MB."
+            break
+        fi
+    done
+}
 
-echo -e "\n====================================================="
-echo "[*] VERIFICACIÓ FINALITZADA"
-echo "====================================================="
+# --- MENÚ ---
+echo ""
+echo "Tria el test a realitzar:"
 
+echo "1) Fitxers (nofile)"
+echo "2) Processos (nproc)"
+echo "3) Memòria (as)"
+read -p "Opció: " opc
+
+case $opc in
+    1) test_nofile ;;
+    2) test_nproc ;;
+    3) test_memoria ;;
+    *) echo "Opció no vàlida" ;;
+esac
