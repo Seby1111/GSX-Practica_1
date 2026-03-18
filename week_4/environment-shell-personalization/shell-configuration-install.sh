@@ -1,34 +1,39 @@
 #!/bin/bash
 
-arxiu="/etc/profile.d/shell-configuration.sh"
+arxiu="/etc/profile.d/greendevcorp-shell-configuration.sh"
 
 if [ ! -f "$arxiu" ]; then
-    echo "Creant shell-configuration.sh..."
+    echo "Creant greendevcorp-shell-configuration.sh..."
 
     sudo tee "$arxiu" > /dev/null << 'EOF'
-# File: /etc/profile
-# Runs on login for all shell types
+#!/bin/bash
 
-# Set default PATH
-export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Solo para miembros del grupo greendevcorp
+if id -nG "$USER" | grep -qw "greendevcorp"; then
 
-# Set language (Spanish)
-export LANG=es_ES.UTF-8
+    # Configuración compartida del equipo:
 
-# Set timezone
-export TZ=Europe/Madrid
+    # PATH adicional para scripts del grupo
+    export PATH="$PATH:/home/greendevcorp/bin"
 
-# Set default editor
-export EDITOR=nano
+    # Alias útiles para todos
+    alias ll='ls -la'
+    alias gs='git status'
+    alias gp='git pull'
 
-# Set default pager
-export PAGER=less
+    # Set language (Spanish)
+    export LANG=es_ES.UTF-8
 
-# Run scripts in /etc/profile.d/
-for script in /etc/profile.d/:.sh; do
-    source "$script"
-done
+    # Set timezone
+    export TZ=Europe/Madrid
+
+    # Set default editor
+    export EDITOR=nano
+
+    # Set default pager
+    export PAGER=less
+fi
 EOF
-
-    sudo chmod +x "$arxiu"
+    # Lectura para los miembros del grupo, escritura solo para el root
+    sudo chmod 640 /etc/profile.d/greendevcorp-shell-configuration.sh
 fi
