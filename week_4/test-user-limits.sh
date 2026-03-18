@@ -12,14 +12,19 @@ ulimit -Sa | grep -E "processes|open files|cpu time|virtual memory"
 echo -e "\n[INFO] Provant límit de processos (nproc)..."
 (
     count=0
-    while [ $count -lt 500 ]; do
+    # Intentarem llançar només fins a 120 per no col·lapsar la sessió sencera
+    for i in {1..120}; do
         sleep 100 & 2>/dev/null
         if [ $? -ne 0 ]; then
-            echo "    -> [OK] Límit assolit a la xifra: $count"
+            echo "    -> [OK] Límit assolit correctament a la xifra: $count"
+            
+            # Matem els que hem creat abans de sortir del parèntesi
+            kill $(jobs -p) 2>/dev/null
             break
         fi
-        count=$((count + 1))
+        count=$i
     done
+    # Netegem per si de cas
     kill $(jobs -p) 2>/dev/null
 )
 
