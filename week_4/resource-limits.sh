@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Comprovem si l'script s'executa com a root
+if [[ $EUID -ne 0 ]]; then
+   echo "[!] Aquest script s'ha d'executar com a root (fent servir sudo)."
+   exit 1
+fi
+
+echo "[INFO] Configurant límits de recursos via PAM..."
+
+# Creem el fitxer de configuració
+cat <<EOF > /etc/security/limits.d/user_limits.conf
+#<domain>      <type>  <item>         <value>
+
+* soft    cpu             20          # 20 minuts CPU (avís)
+* hard    cpu             30          # 30 minuts CPU (tall)
+* soft    as              1024000     # 1GB Memòria Virtual
+* hard    as              2048000     # 2GB Memòria Virtual
+* soft    nproc           100         # 100 processos
+* hard    nproc           150         # 150 processos
+* soft    nofile          512         # 512 fitxers oberts
+* hard    nofile          1024        # 1024 fitxers oberts
+EOF
+
+# Verificació de PAM
+echo "[INFO] Verificant mòdul pam_limits.so..."
+if ! grep -q "pam_limits.so" /etc/pam.d/common-session; then
+    echo "session required pam_limits.so" >> /etc/pam.d/common-session
+    echo "[OK] Mòdul PAM afegit a common-session."
+else
+    echo "[OK] PAM ja estava configurat."
+fi
