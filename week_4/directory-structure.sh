@@ -11,6 +11,8 @@ echo "[INFO] Creant i configurant el directori /home/greendevcorp/bin..."
 # Creem el directori només si no existeix
 mkdir -p /home/greendevcorp/bin
 
+groupadd -f greendevcorp
+
 # Assignem el grup
 chown :greendevcorp /home/greendevcorp/bin
 
