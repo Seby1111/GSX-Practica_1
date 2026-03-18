@@ -32,4 +32,3 @@ else
 fi
 
 echo "[INFO] Torna a iniciar sessio per aplicar els canvis"
-
