@@ -30,3 +30,5 @@ if ! grep -q "pam_limits.so" /etc/pam.d/common-session; then
 else
     echo "[OK] PAM ja estava configurat."
 fi
+
+echo "[INFO] Torna a iniciar sessio per aplicar els canvis"
