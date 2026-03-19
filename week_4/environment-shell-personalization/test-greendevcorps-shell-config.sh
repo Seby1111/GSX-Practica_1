@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Y SI ALGUIEN CAMBIA LOS ALIAS DESPUES DE QUE ESTÉ ESTE SCRIPT INSTALADO? COMO LO SOLUCIONARIAMOS? PENSAR PARA TODOS LOS SCRIPTS CON LÓGICA ASÍ
+
 # Nombre del usuario de prueba (dentro del grupo)
 
 TEST_USER="nuevo_usuario"

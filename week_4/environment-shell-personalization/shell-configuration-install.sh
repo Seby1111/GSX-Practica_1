@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Y SI ALGUIEN CAMBIA LOS ALIAS DESPUES DE QUE ESTÉ ESTE SCRIPT INSTALADO? COMO LO SOLUCIONARIAMOS? PENSAR PARA TODOS LOS SCRIPTS CON LÓGICA ASÍ
+
 arxiu="/etc/profile.d/greendevcorp-shell-configuration.sh"
 
 if [ ! -f "$arxiu" ]; then
