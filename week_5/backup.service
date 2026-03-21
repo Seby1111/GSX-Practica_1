@@ -1,0 +1,6 @@
+[Unit]
+Description=Backup Script
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/auto-backup.sh
