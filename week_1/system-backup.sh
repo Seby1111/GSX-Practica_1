@@ -7,7 +7,7 @@
 
 # Configuració de rutes i paràmetres
 BACKUP_DIR="/var/backups/system_backups"
-SOURCES=("/etc/configs" "/opt/scripts") # Directoris crítics definits anteriorment
+SOURCES=("/etc/configs" "/opt/scripts" "/opt/backup") # Directoris crítics definits anteriorment
 DATE=$(date +%Y%m%d)
 OUTPUT_FILE="$BACKUP_DIR/backup_$DATE.tar.gz"
 PASSPHRASE="milax" # Contrasenya per al xifrat simètric

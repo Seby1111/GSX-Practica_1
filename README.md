@@ -2,6 +2,73 @@
 
 ## Week 1
 
+**Com accedir al sistema**
+
+Per garantir la seguretat de la infraestructura, l'accés s'ha restringit i configurat de la següent manera:
+
++ Protocol d'accés: SSH (Secure Shell).
+
++ Port de connexió: 2222 (modificat des del port 22 per seguretat).
+
++ Mètode d'autenticació: Clau pública/privada (Ed25519). L'accés per contrasenya ha estat deshabilitat.
+
++ Guia de connexió:
+    1. Executar l'script *add-ssh-key.sh* per generar i copiar la clau pública al servidor.
+    2. Connectar-se al serviodr utlitzant la comanda següent:
+            
+            ssh -p 2222 usuari@adreça_ip_servidor
+
+
+**Per què SSH sobre altres opcions?**
+
+S'ha triat SSH com a mètode d'administració principal per diversos motius:
+
++ Seguretat: Tot el trànsit (incloses les credencials) viatja xifrat, a diferència de mètodes antics com Telnet o FTP.
+
++ Estàndard de la indústria: És l'eina nativa en sistemes Unix/Linux per a l'administració remota.
+
++ Versatilitat: Permet no només l'execució de comandes, sinó també la transferència segura de fitxers (SCP/SFTP) i el tunelitzat de ports.
+
++ Autenticació robusta: La implementació de claus Ed25519 ens permet eliminar el vector d'atac de força bruta sobre contrasenyes.
+
+**Per què aquesta estructura de directoris?**
+
+S'ha seguit una variant de l'estàndard FHS (Filesystem Hierarchy Standard) per facilitar el manteniment a llarg termini:
+
++ /etc/configs: Separa les configuracions "custom" de les originals del sistema, fent que les auditories de canvis siguin molt més ràpides.
+
++ /opt/scripts: Segons l'FHS, /opt és per a software addicional. Ubicar aquí els nostres scripts d'automatització evita "embrutar" directoris del sistema com /usr/bin.
+
++ /var/backups: Utilitzem /var perquè és la jerarquia destinada a dades variables i fitxers que creixen en mida, assegurant que les còpies no omplin la partició arrel si tenim els discos ben separats.
+
+**Polítiques de seguretat**
+
+Aquests punts defineixen les regles de seguretat obligatòries per a tot el personal tècnic de l'empresa.
+
++ Principi de Mínim Privilegi: Cap usuari ha de treballar directament com a root. L'ús de sudo és obligatori i quedarà registrat als logs del sistema.
+
++ Autenticació: Queda prohibit l'ús de contrasenyes per a l'accés remot. Només es permet l'ús de claus SSH (mínim Ed25519 o RSA 4096).
+
++ Gestió de Ports: El port per defecte (22) s'ha de mantenir tancat o canviat al 2222 per evitar atacs de força bruta automatitzats.
+
++ Actualitzacions: El servei unattended-upgrades ha d'estar actiu permanentment per aplicar parches de seguretat diaris de forma automàtica.
+
++ Còpies de Seguretat: Totes les dades crítiques s'han de xifrar amb GPG abans de sortir del servidor o ser emmagatzemades en volums de backup.
+
+**Què hem après sobre l'automatització?**
+
+L'automatització de la infraestructura ens ha permès entendre que la consistència és la clau de la seguretat.
+
+Durant aquesta setmana hem après:
+
++ Idempotència: La importància que un script pugui executar-se moltes vegades sense trencar res (comprovant si un usuari o directori ja existeix abans de crear-lo).
+
++ Reducció de l'error humà: Configurar manualment el port SSH o els permisos d'un disc és propens a oblits. Un script ben testejat garanteix que cada servidor desplegat sigui idèntic i segur.
+
++ Escalabilitat: El que abans ens portava 20 minuts de configuració manual, ara es fa en 2 minuts amb un sol orquestrador. Això és vital en una startup on el temps és un recurs escàs.
+
++ Recuperació davant desastres: Tenir l'estratègia de backup automatitzada i xifrada no és només una tasca tècnica, sinó una "assegurança de vida" per a les dades de l'empresa.
+
 ### basic-config-root.sh
 
 L'script **basic-config-root.sh** té com a finalitat automatitzar el desplegament inicial del servidor Debian, garantint una configuració de seguretat base i la creació dels usuaris administradors.
@@ -170,7 +237,7 @@ Funcionalitats Implementades:
 
 + Selecció Intel·ligent de Dades:
 
-    - Verificació dinàmica: L'script analitza l'existència de les rutes d'origen (/etc/configs i /opt/scripts) abans de començar, evitant errors d'execució si algun directori encara no ha estat creat.
+    - Verificació dinàmica: L'script analitza l'existència de les rutes d'origen (/etc/configs, /opt/scripts i /opt/backup) abans de començar, evitant errors d'execució si algun directori encara no ha estat creat.
 
     - Filtratge de rutes: Només s'inclouen en el backup aquells elements que realment existeixen en el sistema en el moment de l'execució.
 
@@ -195,6 +262,131 @@ Instruccions d'ús:
 > Nota: El resultat final és un fitxer amb extensió .tar.gz.gpg. Per recuperar les dades, caldrà utilitzar la comanda gpg -d introduint la frase de pas definida a l'script.
 # Week 2
 
+**Descripció de l'Arquitectura de Serveis**
+
+L'arquitectura s'ha dissenyat sota un model de serveis desacoblats, on cada component té una funció específica i limitada (Principi de Responsabilitat Única).
+1. Capa de Gestió de Processos (Systemd)
+
+    En lloc d'usar el crontab tradicional, hem implementat una arquitectura basada en unitats de systemd:
+
+    + backup.timer: Actua com l'esdeveniment disparador (trigger). Està configurat amb persistència per garantir que cap còpia es perdi si el servidor està apagat.
+
+    + backup.service: Defineix l'entorn d'execució. Aquí és on limitem el consum de CPU al 50% i la Memòria a 2GB, assegurant que el backup no "trepitgi" el servei web Nginx.
+
+2. Capa d'Execució i Seguretat (Scripts & GPG)
+
++ Script de Control (/opt/backup/backup.sh): L'orquestrador que recull les dades de /etc/configs, /opt/scripts i /opt/backup.
+
++ Motor de Xifrat (GPG): Transforma el fitxer comprimit en un fitxer segur .gpg. Aquesta capa garanteix la confidencialitat de les dades fins i tot si el suport físic es veu compromès.
+
+3. Capa d'Usuaris i Permisos (Hardening)
+
+    L'arquitectura aplica un model d'usuaris amb una feina única:
+
+    + backupuser: Un usuari de sistema sense shell (nologin) que és l'únic amb permisos d'escriptura a /var/backups. Això evita que un atacant que entri per Nginx pugui esborrar les còpies de seguretat.
+
+4. Flux de Dades (Data Flow)
+
+    1. El Timer arriba a l'hora programada.
+
+    2. Crida al Servei, que inicia l'script sota la identitat de backupuser.
+
+    3. L'script llegeix les fonts i genera el .tar.gz.
+
+    4. GPG xifra el fitxer i elimina l'original sense xifrar.
+
+    5. El sistema registra l'èxit o error al Journald (logs).
+
+**Com reiniciar un servei caigut?**
+
+Si detectes que un servei (Nginx, SSH o el Backup) no respon, segueix aquests passos:
+1. Verificar l'estat del servei
+    
+    Abans de reiniciar, comprova si realment està aturat i quin és l'error
+
+        sudo systemctl status nom_del_servei
+
+2. Reiniciar el servei
+
+    Si el servei està en estat failed o inactive, executa:
+
+        sudo systemctl restart nom_del_servei
+
+3. Forçar la recàrrega (si s'ha canviat la configuració)
+
+    Si has modificat algun fitxer de /etc/ i vols que el servei llegeixi els canvis sense aturar-se del tot:
+
+        sudo systemctl reload nom_del_servei
+
+**Com consultar els logs dels serveis?**
+
+Els logs són la teva principal eina per saber què ha passat. Utilitzem journalctl, que és l'eina nativa de systemd.
+1. Veure els logs de Nginx o SSH
+
+    Per veure els últims esdeveniments en temps real:
+
+        sudo journalctl -u nginx -f
+        sudo journalctl -u ssh -f
+
+2. Consultar logs de l'script de Backup
+
+    Com que el nostre backup s'executa com a servei, podem veure exactament què ha passat durant l'execució:
+
+        sudo journalctl -u backup.service
+
+3. Filtrar per temps
+
+    Si vols veure què va passar ahir o fa una hora:
+
+        # Logs des d'avui
+        sudo journalctl -u backup.service --since today
+
+        # Logs d'una hora concreta
+        sudo journalctl -u nginx --since "2023-10-25 12:00:00"
+
+4. Veure errors crítics de tot el sistema
+
+    Si no saps quin servei falla però el sistema va malament:
+
+        sudo journalctl -p err, crit, alert, emerg
+
+### backup-setup.sh
+
+L'script backup-setup.sh té com a finalitat integrar l'script de còpies de seguretat dins del cicle de vida del sistema operatiu Debian. Mitjançant la creació d'unitats de systemd, s'assegura que les dades de la startup es protegeixin sense necessitat d'intervenció manual.
+
+Funcionalitats Implementades:
+
++ Desplegament de l'Entorn de Treball:
+
+    - Centralització de l'executable: Copia l'script de backup a /opt/backup/backup.sh, una ruta estàndard per a software de tercers que facilita el manteniment i la seguretat.
+
+    - Gestió de permisos: S'assegura que tant el directori com l'script siguin propietat exclusiva del backupuser.
+
++ Creació del Servei (backup.service):
+
+    - Aïllament: El servei s'executa sota un usuari sense privilegis, minimitzant riscos en cas que l'script fos compromès.
+
+    - Control de Recursos: S'han establert límits de hardware (CPUQuota=50% i MemoryMax=2G) per garantir que el procés de backup no afecti el rendiment d'altres serveis crítics mentre s'executa.
+
+    - Integració amb Logs: Els resultats i errors s'envien directament al journal de sistema per a la seva posterior auditoria.
+
++ Automatització Temporal (backup.timer):
+
+    - Programació diària: S'ha configurat una execució cada mitjanit (00:00:00).
+
+    - Robustesa amb Persistent=true: Aquesta opció és crítica; si el servidor s'apaga per manteniment durant la nit, el backup s'executarà automàticament tan bon punt el servidor torni a arrencar.
+
+    - Reducció de pic de càrrega: L'ús de RandomizedDelaySec evita que en infraestructures amb múltiples servidors tots comencin el backup exactament al mateix segon.
+
+Instruccions d'ús:
+
+1. Assegureu-vos que l'script system-backup.sh existeix a la carpeta de la setmana 1.
+
+2. Donar permisos d'execució: chmod +x backup-setup.sh
+
+3. Executar l'script: sudo ./backup-setup.sh
+
+> Nota: Per verificar que el backup està programat, podeu utilitzar la comanda systemctl list-timers. Per veure els logs de l'última execució del backup, useu journalctl -u backup.service.
 # Week 3
 
 # Week 4
