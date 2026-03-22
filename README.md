@@ -260,7 +260,7 @@ Instruccions d'ús:
 2. Executar l'script: ./system-backup.sh (es recomana fer-ho amb privilegis de sudo per poder llegir fitxers de configuració protegits a /etc/).
 
 > Nota: El resultat final és un fitxer amb extensió .tar.gz.gpg. Per recuperar les dades, caldrà utilitzar la comanda gpg -d introduint la frase de pas definida a l'script.
-# Week 2
+## Week 2
 
 **Descripció de l'Arquitectura de Serveis**
 
@@ -387,55 +387,127 @@ Instruccions d'ús:
 3. Executar l'script: sudo ./backup-setup.sh
 
 > Nota: Per verificar que el backup està programat, podeu utilitzar la comanda systemctl list-timers. Per veure els logs de l'última execució del backup, useu journalctl -u backup.service.
-# Week 3
 
-# Week 4
+## Week 3
 
-## 1. User and Group Structure
+### top-resource-consumers.sh
 
-# Y SI ALGUIEN CAMBIA LOS ALIAS DESPUES DE QUE ESTÉ ESTE SCRIPT INSTALADO? COMO LO SOLUCIONARIAMOS? PENSAR PARA TODOS LOS SCRIPTS CON LÓGICA ASÍ
+L'script **top-resource-consumers.sh** és una eina de diagnòstic ràpid dissenyada per oferir visibilitat sobre l'estat de càrrega del servidor. Permet identificar en pocs segons quins serveis o usuaris estan saturant els recursos de hardware.
 
-# Week 5
+Funcionalitats Implementades:
 
-Task 2:
++ Extracció de Mètriques de Rendiment:
 
-Current State 
-    • A single Debian Linux server (minimally configured) 
-    • Sensitive project data that must not be lost 
-    • Legacy and new applications that need to coexist 
-    • No formal infrastructure documentation or disaster recovery plan 
-    • Ad-hoc, manual administration (no automation)
+    - Monitoratge dual: Analitza simultàniament l'ús de la CPU i de la Memòria RAM, permetent detectar tant processos de càlcul intensiu com fugues de memòria.
 
+    - Detall de memòria: Mostra tant la Memòria Virtual (VSZ) com la memòria física real utilitzada (RSS), dades clau per a la depuració de serveis web com Nginx o bases de dades.
 
-Activos clave:
++ Processament i Filtratge de Dades:
 
-    - Repositorios de código (Crítico)
+    - Ordenació intel·ligent: L'script prioritza els processos amb major consum de CPU i, en cas d'empat, els de major consum de memòria.
 
-        -> Contiene:
-            código fuente
-            historial de cambios
+    - Neteja de soroll: Filtra automàticament les pròpies comandes del sistema (grep, ps, sort, head) utilitzades per generar l'informe, evitant falsos positius en el llistat.
 
-        -> Riesgo:
-            pérdida = reconstrucción de proyectos / partes de proyectos desde 0
++ Format de Sortida Professional:
 
-    - Bases de datos (Crítico)
+    - Estructura ordenada: Mitjançant l'ús de printf i awk, es genera una taula alineada perfectament, facilitant la lectura ràpida per part de l'administrador en entorns de terminal de només text.
 
-        -> Contiene:
-            usuarios
-            configuraciones
-            datos dinámicos
+Instruccions d'ús:
 
-        -> Riesgo:
-            pérdida = datos con los que funciona el negocio
+1. Donar permisos d'execució: chmod +x top-resource-consumers.sh
 
-    - Configuración del sistema (Importante)
+2. Executar l'script: ./top-resource-consumers.sh
 
-        -> Contiene:
-            /etc/
-            scripts en /opt/
-            servicios (systemd)
+> Nota: Tot i que es pot executar com a usuari normal, es recomana fer-ho amb sudo per poder veure detalls de processos del sistema o d'altres usuaris que podrien estar ocults per restriccions de privacitat.
 
-        -> Riesgo:
-            pérdida = perdida de configuraciones establecidas más allá de las básicas (generadas con scripts)
+### process-tree.sh
 
-Escogemos implementar tanto incremental como full en un solo script debido a que así evitamos inconsistencias entre backups por errores de scripting, toda la lógica está centralizada en un solo script, aunque este termine siendo más complejo.
+L'script **process-tree.sh** és una eina d'anàlisi estructural que permet als administradors de la startup entendre la relació de dependència entre els diferents processos del servidor. És especialment útil per diagnosticar per què un servei ha aixecat múltiples sub-processos o per identificar el procés pare d'una tasca sospitosa.
+
+Funcionalitats Implementades:
+
++ Cerca Flexible de Processos:
+
+    - Identificació Dual: L'script accepta tant un PID (identificador numèric) com el nom del procés, adaptant-se a la informació que l'administrador tingui disponible en aquell moment.
+
+    - Resolució Inteligent: En cas de múltiples processos amb el mateix nom, l'script selecciona automàticament el que presenta un major consum de recursos, agilitant la diagnosi en situacions de sobrecàrrega.
+
++ Visualització de la Genealogia del Sistema:
+
+    - Traçabilitat d'Ancestres: Gràcies a l'ús de pstree -s, no només es veuen els fills del procés, sinó tota la cadena de comandament cap amunt fins arribar al procés arrel (systemd).
+
+    - Detall d'Execució: Mostra els arguments amb els quals s'ha llançat cada procés (-a), permetent diferenciar entre diverses instàncies d'un mateix servei.
+
++ Robustesa i Validació:
+
+    - Control d'errors: L'script verifica l'existència real del procés en cada pas, evitant sortides buides o errors de sistema inesperats si el procés mor durant l'execució de l'script.
+
+Instruccions d'ús:
+
+1. Donar permisos d'execució: chmod +x process-tree.sh
+
+2. Executar passant un argument: ./process-tree.sh <PID|nom>
+
+### process-metrics.sh
+
+L'script **process-metrics.sh** és una eina d'auditoria de baix nivell dissenyada per extreure dades directament de la interfície del kernel Linux (/proc). La seva finalitat és proporcionar una diagnosi completa del consum de recursos i el comportament d'un procés específic.
+
+Funcionalitats Implementades:
+
++ Anàlisi d'Estat i Memòria:
+
+    - Lectura del fitxer status: Extreu dades crítiques com el PPid (pare), el nombre de fils (Threads) i els canvis de context, que indiquen si el procés està saturant el planificador de la CPU.
+
+    - Monitoratge de RAM física: Mostra el VmRSS, que és la quantitat exacta de memòria resident al disc físic.
+
++ Monitoratge d'Impacte en Disc (I/O):
+
+    - Mesura del trànsit de dades: Calcula els KB llegits i escrits pel procés, permetent identificar aplicacions que degraden el rendiment del disc.
+
++ Prevenció de Bloquejos de Sistema (File Descriptors):
+
+    - Càlcul de límits: L'script compara el nombre de fitxers oberts actualment amb el límit màxim permès pel sistema.
+
+    - Indicador d'ús: Genera un percentatge d'ús del límit per avisar l'administrador abans que el procés arribi al seu límit.
+
++ Reconstrucció de l'Entorn d'Execució:
+
+    - Recuperació de la comanda completa: Mitjançant el fitxer cmdline, l'script reconstrueix la línia de comandes exacta amb tots els seus arguments, clau per replicar o depurar el procés.
+
+Instruccions d'ús:
+
+1. Donar permisos d'execució: chmod +x process-metrics.sh
+
+2. Executar amb privilegis per a dades de sistema: sudo ./process-metrics.sh <PID|nom>
+
+### workload.sh
+
+L'script **workload.sh** és una eina de simulació dissenyada per posar a prova la capacitat de resposta del sistema i les habilitats de l'administrador en la gestió de processos. Permet observar en temps real com un procés pare gestiona els seus fills i com respon a les ordres externes del sistema operatiu.
+
+Funcionalitats Implementades:
+
++ Gestió Avançada de Senyals (Signals):
+
+    - Implementació de traps: L'script captura senyals estàndard (SIGTERM, SIGINT) i personalitzats (SIGUSR1/2), evitant tancaments inesperats i permetent rutes de sortida controlades.
+
+    - Tancament Controlat: Garanteix que, en rebre una petició d'aturada, l'script primer finalitzi els processos fills que ha creat abans de morir ell mateix.
+
++ Simulació de Càrrega de Sistema:
+
+    - Generació de consum de CPU: Utilitza el procés 'yes' en segon pla per simular una càrrega de treball real, permetent a l'administrador practicar amb les eines de monitoratge anteriorment creades.
+
++ Escenaris de Prova Forense:
+
+    - Creació controlada de Processos Orfes: L'script permet experimentar amb el senyal SIGKILL (-9), que en no poder ser capturat, provoca que l'script mori sense netejar el fill, creant un "procés orfe" que l'administrador haurà d'identificar i eliminar manualment.
+
+Instruccions d'ús:
+
+1. Donar permisos d'execució: chmod +x workload.sh
+
+2. Executar l'script: ./workload.sh
+
+> Nota: Obre una segona terminal i utilitza les comandes kill que l'script t'ha mostrat per pantalla per observar el comportament del sistema.
+
+## Week 4
+
+## Week 5
