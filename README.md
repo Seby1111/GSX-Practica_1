@@ -806,3 +806,101 @@ Instruccions d'ús:
 3. Seleccionar el test desitjat i observar com el sistema bloqueja l'execució en arribar al valor "Hard" definit en la configuració.
 
 ## Week 5
+
+**Arquitectura d'emmagatzematge i planificació de la capacitat**
+
+L'arquitectura d'emmagatzematge s'ha dissenyat per separar el Sistema Operatiu de les Dades d'Usuari:
+
++ Disc Principal (/dev/sda): Conté el SO i les configuracions. Es manté el més net possible per facilitar clonacions o migracions.
+
++ Disc de Dades (/dev/sdb1): Gestionat per l'script storage-setup.sh. Està muntat a /home/greendevcorp i conté tant el directori shared com el directori backups.
+
++ Planificació de Capacitat:
+
+    - S'ha establert una quota de memòria virtual per usuari de 2GB per evitar l'esgotament del disc per fitxers temporals.
+
+    - Es recomana un monitoratge setmanal de l'espai lliure (df -h) per preveure l'ampliació del disc secundari abans que arribi al 90% d'ocupació.
+
+**Procediment de backup i horaris**
+
+La seguretat de les dades es basa en l'automatització total mitjançant Systemd Timers:
+
++ Tipus de Backup: Incremental (només canvis) o Total (imatge comprimida .tar.gz).
+
++ Xifratge: Tots els backups es xifren amb GPG immediatament després de la seva creació, garantint que ningú sense la clau privada pugui llegir les dades de l'empresa.
+
++ Horari:
+
+    - Execució diària a les 03:00 AM (hora de mínima càrrega del servidor).
+
+    - Configurat amb Persistent=true al timer: si el servidor estava apagat a l'hora programada, el backup s'executarà immediatament en arrencar.
+
+**Procediment de recuperació**
+
+En cas de pèrdua de fitxers individuals o corrupció de dades:
+
+1. Identificar el backup: Anar al directori /var/backups (o el punt definit) i localitzar el fitxer .gpg més recent.
+
+2. Desxifrat:
+
+        gpg --decrypt backup_202X_MM_DD.tar.gz.gpg > backup_recuperat.tar.gz
+
+3. Extracció:
+
+        tar -xzf backup_recuperat.tar.gz -C /tmp/recuperacio
+
+4. Restauració: Moure els fitxers necessaris de /tmp/recuperacio a la seva ruta original, verificant els permisos amb ls -l.
+
+**Guió d'execució de recuperació en cas de desastre**
+
+Aquest protocol s'aplica si el servidor queda totalment inoperatiu (fallada de la VM o del Cloud):
+
+1. Aixecament de Nova Instància: Crear una nova màquina virtual amb la mateixa distribució de Linux (Debian).
+
+2. Re-execució de Provisioning:
+
+    - Executar scritps de configuració del sistema.
+
+    - Executar user-group-structure.sh per recrear la base d'usuaris.
+
+    - Executar directory-structure.sh per recrear la jerarquia de carpetes.
+
+4. Muntatge del Disc de Dades: Si el disc secundari encara existeix, muntar-lo amb l'UUID corresponent al /etc/fstab. Si no, crear-ne un de nou amb storage-setup.sh.
+
+5. Restauració de la darrera Còpia Externa: Descarregar el darrer backup xifrat des de l'emmagatzematge extern (off-site), desxifrar i bolcar sobre /home/greendevcorp.
+
+5. Verificació: Comprovar que els serveis tornen a estar actius.
+
+### storage-setup.sh
+
+L'script **storage-setup.sh** és una eina d'administració de sistemes dissenyada per gestionar el cicle complet d'integració d'una nova unitat d'emmagatzematge en el servidor de la startup, garantint la integritat de les dades i l'arrencada segura del sistema.
+
+Funcionalitats Implementades:
+
++ Preparació de Discos i Particionat:
+
+    - Implementa taules de particions GPT, permetent la gestió de discos de gran capacitat i superant les limitacions de l'antic format MBR.
+
+    - Gestió d'alineament: L'script inicia la partició a 1MiB, assegurant el màxim rendiment en discos moderns i màquines virtuals.
+
++ Seguretat i Validació de Rutes:
+
+    - Inclou un sistema de protecció de rutes crítiques que impedeix que l'administrador munti accidentalment un disc sobre carpetes vitals com /etc o /boot, cosa que podria deixar el sistema inoperatiu.
+
+    - Verificació de tipus de bloc: L'script valida que l'objectiu sigui realment un dispositiu físic abans d'iniciar qualsevol operació destructiva (formatat).
+
++ Persistència de Dades mitjançant UUID:
+
+    - En lloc d'utilitzar noms variables (com /dev/sdb1), l'script extreu l'UUID únic de la partició. Això garanteix que, encara que s'afegeixin nous discos o es canviï la configuració de la VM, el disc de dades sempre es muntarà a la carpeta correcta.
+
++ Prevenció de Fallades d'Arrencada:
+
+    - Realitza una comprovació automàtica del fitxer /etc/fstab mitjançant mount -a. Això és una mesura de seguretat crítica que avisa l'administrador de qualsevol error de sintaxi abans del pròxim reinici, evitant que el servidor quedi atrapat en una fallada d'arrencada (boot failure).
+
+Instruccions d'ús:
+
+1. Dona permisos d'execució: chmod +x storage-setup.sh
+
+2. Executa amb privilegis de root: sudo ./storage-setup.sh
+
+3. Segueix els indicadors de pantalla per seleccionar el disc detectat per la VM.
