@@ -15,7 +15,7 @@ sudo apt update
 
 echo "[*] Instal·lant paquets necessaris..."
 
-PACKAGES=("nginx")
+PACKAGES=("nginx" "rsync")
 
 for package in "${PACKAGES[@]}"; do
     install_if_missing "$package"

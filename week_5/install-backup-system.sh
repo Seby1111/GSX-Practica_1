@@ -26,12 +26,8 @@ DOM=$(date +%d)
 
 # Directorios de backup
 # BACKUP_DIR: raíz de backups
-# FULL_DIR: backups completos (semanales)
-# INC_DIR: backups incrementales (diarios)
 # LOG_FILE: archivo de logs
 BACKUP_DIR="/var/backups"
-FULL_DIR="$BACKUP_DIR/full"
-INC_DIR="$BACKUP_DIR/incremental/$DATE"
 DAILY_DIR="$BACKUP_DIR/daily"
 WEEKLY_DIR="$BACKUP_DIR/weekly"
 MONTHLY_DIR="$BACKUP_DIR/monthly"
@@ -53,15 +49,12 @@ chmod 1700 $BACKUP_DIR
 #
 # /var/www -> Archivos web servidos por nginx
 #
-# /etc/letsencrypt -> Certificados SSL (HTTPS) para restaurar servicio web
-#
 # Incluye: datos + configuración + permisos
 SOURCE=(
 /etc
 /home/greendevcorp
 /opt
 /var/www
-/etc/letsencrypt
 )
 
 # EXCLUDE: Excluir del backup
@@ -87,15 +80,6 @@ echo "==========================================================================
 echo "Backup iniciado: $DATE"
 
 # Crear directorios si no existen
-if [ ! -d "$FULL_DIR" ]; then
-    echo "Creando directorio full: $FULL_DIR"
-    mkdir -p "$FULL_DIR"
-fi
-
-if [ ! -d "$INC_DIR" ]; then
-    echo "Creando directorio incremental: $INC_DIR"
-    mkdir -p "$INC_DIR"
-fi
 
 if [ ! -d "$DAILY_DIR" ]; then
     mkdir -p "$DAILY_DIR"
@@ -112,58 +96,64 @@ fi
 # BACKUP PRINCIPAL:
 # Domingo -> Full backup (copia completa con tar)
 # Resto de días -> Incremental (rsync)
+# Primer dia de cada mes -> Full backup de nuevo
 # rsync:
 #   copia solo cambios
 #   -aA preserva permisos
-if [ "$DAY" -eq 7 ]; then
-    echo "FULL BACKUP"
-    tar --acls --xattrs -czf "$FULL_DIR/backup-$DATE.tar.gz" "${SOURCE[@]}"
-else
-    echo "INCREMENTAL BACKUP"
-    rsync -aA --delete "${EXCLUDE[@]}" "${SOURCE[@]}" "$INC_DIR"
-fi
 
 # DAILY BACKUP (se guarda siempre)
-tar --acls --xattrs -czf "$DAILY_DIR/backup-$DATE.tar.gz" "${SOURCE[@]}"
+echo "DAILY BACKUP"
+SNAPSHOT_DIR="$DAILY_DIR/$DATE"
+PREV_DIR="$DAILY_DIR/latest"
+
+mkdir -p "$SNAPSHOT_DIR"
+
+# Si existe backup previo, usarlo como referencia
+if [ -e "$PREV_DIR" ]; then
+    LINK_DEST="--link-dest=$PREV_DIR"
+else
+    LINK_DEST=""
+fi
+
+# Ejecutar rsync (con o sin link-dest) y con paths relativo (R)
+if [ -n "$LINK_DEST" ]; then
+    rsync -aA --delete -R "$LINK_DEST" "${EXCLUDE[@]}" "${SOURCE[@]}" "$SNAPSHOT_DIR/"
+else
+    rsync -aA --delete -R "${EXCLUDE[@]}" "${SOURCE[@]}" "$SNAPSHOT_DIR/"
+fi
+
+ln -sfn "$SNAPSHOT_DIR" "$PREV_DIR"
 
 # WEEKLY BACKUP (domingo)
 if [ "$DAY" -eq 7 ]; then
     echo "WEEKLY BACKUP"
-    tar --acls --xattrs -czf "$WEEKLY_DIR/backup-weekly-$DATE.tar.gz" "${SOURCE[@]}"
+    tar --acls --xattrs -czf "$WEEKLY_DIR/backup-weekly-$DATE.tar.gz" "${SOURCE[@]}" 2>/dev/null
 fi
 
 # MONTHLY BACKUP (día 1 del mes)
 if [ "$DOM" -eq 01 ]; then
     echo "MONTHLY BACKUP"
-    tar --acls --xattrs -czf "$MONTHLY_DIR/backup-monthly-$DATE.tar.gz" "${SOURCE[@]}"
+    tar --acls --xattrs -czf "$MONTHLY_DIR/backup-monthly-$DATE.tar.gz" "${SOURCE[@]}" 2>/dev/null
 fi
 
-# Full backups -> borrar > 30 días
-# Incrementales -> borrar > 7 días
 echo "Limpieza de backups antiguos..."
-find "$BACKUP_DIR/full" -type f -mtime +30 -delete
-find "$BACKUP_DIR/incremental" -type d -mtime +7 -exec rm -rf {} \;
 
 # Retention policy nueva
 # Daily -> 7 días
 # Weekly -> 4 semanas (~28 días)
 # Monthly -> 12 meses (~365 días)
 
-find "$DAILY_DIR" -type f -mtime +7 -delete
-find "$WEEKLY_DIR" -type f -mtime +28 -delete
-find "$MONTHLY_DIR" -type f -mtime +365 -delete
-
-if [ $? -eq 0 ]; then
-    echo "Backup completado correctamente"
-else
-    echo "Error en el backup"
-fi
+find "$DAILY_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} + # {} + : para agrupar el contenido y ejecutar la
+find "$WEEKLY_DIR" -type f -mtime +28 -delete                                 # instrucción sobre todos, aquí "*" no funciona porque
+find "$MONTHLY_DIR" -type f -mtime +365 -delete                               # no permitiría filtrar por antigüedad
 
 echo "Backup completado"
 
 echo "================================================================================"
 echo "==========================     END OF BACKUP     ==============================="
 echo "================================================================================"
+echo ""
+echo ""
 
 sudo ./test-backup.sh
 EOF
@@ -232,7 +222,7 @@ test_tar_backup () {
     fi
 
     # Verificar integridad
-    if tar -tzf "$FILE" > /dev/null 2>&1; then
+    if tar --acls --xattrs -tzf "$FILE" > /dev/null 2>&1; then
         echo "[OK] Archive integrity in order"
     else
         echo "[ERROR] Corrupted archive"
@@ -243,7 +233,7 @@ test_tar_backup () {
     local DEST="$TEST_DIR/$NAME"
     mkdir -p "$DEST"
 
-    tar -xzf "$FILE" -C "$DEST"
+    tar --acls --xattrs -xzf "$FILE" -C "$DEST"
 
     # Verificación básica
     if [ -d "$DEST/etc" ] && [ -d "$DEST/home" ]; then
@@ -288,7 +278,7 @@ test_tar_backup () {
     fi
 
     # Verificación de permisos bin (750)
-    PERM_BIN=$(stat -c "%a" "$GDC_BASE/bin" 2>/dev/null || echo "000")
+    PERM_BIN=$(permisos "$GDC_BASE/bin" 2>/dev/null || echo "000")
     if [ "$PERM_BIN" != "750" ]; then
         echo "[ERROR] Wrong permissions on bin ($PERM_BIN)"
         send_alert "Bad permissions on bin"
@@ -297,7 +287,7 @@ test_tar_backup () {
     fi
 
     # Verificación de permisos shared (3770)
-    PERM_SHARED=$(stat -c "%a" "$GDC_BASE/shared" 2>/dev/null || echo "000")
+    PERM_SHARED=$(stat -c %a "$GDC_BASE/shared" 2>/dev/null || echo "000")
     if [ "$PERM_SHARED" != "3770" ]; then
         echo "[ERROR] Wrong permissions on shared ($PERM_SHARED)"
         send_alert "Bad permissions on shared"
@@ -306,7 +296,7 @@ test_tar_backup () {
     fi
 
     # Verificación done.log (644)
-    PERM_LOG=$(stat -c "%a" "$GDC_BASE/done.log" 2>/dev/null || echo "000")
+    PERM_LOG=$(permisos "$GDC_BASE/done.log" 2>/dev/null || echo "000")
     if [ "$PERM_LOG" != "644" ]; then
         echo "[ERROR] Wrong permissions on done.log ($PERM_LOG)"
         send_alert "Bad permissions on done.log"
@@ -315,15 +305,138 @@ test_tar_backup () {
     fi
 }
 
-#Busca el más reciente de cada tipo y los testea (ls -t | head -n 1)
+# Lo mismo que la función anterior pero adaptado para los snapshots incrementales de DAILY
+test_snapshot_backup () {
+    local DIR=$1
+    local NAME=$2
+
+    echo "[TEST] $NAME -> $DIR"
+
+    # Comprobar que el directorio existe
+    if [ ! -d "$DIR" ]; then
+        echo "[ERROR] Missing $NAME snapshot"
+        send_alert "Missing $NAME snapshot on $HOSTNAME"
+        return
+    fi
+
+    # Verificación básica de estructura
+    if [ -d "$DIR/etc" ] && [ -d "$DIR/home" ]; then
+        echo "[OK] Structure in order for $NAME"
+    else
+        echo "[ERROR] Missing critical dirs in $NAME"
+        send_alert "Structure failure in $NAME snapshot"
+    fi
+
+    # Verificación de contenido real
+    if [ -f "$DIR/etc/passwd" ]; then
+        echo "[OK] Critical file exists (/etc/passwd)"
+    else
+        echo "[ERROR] Missing /etc/passwd"
+        send_alert "Missing passwd file in $NAME snapshot"
+    fi
+
+    # Verificación estructura greendevcorp
+    GDC_BASE="$DIR/home/greendevcorp"
+
+    if [ -d "$GDC_BASE" ]; then
+        echo "[OK] greendevcorp directory exists"
+    else
+        echo "[ERROR] Missing /home/greendevcorp"
+        send_alert "Missing greendevcorp directory"
+        return
+    fi
+
+    # Verificar subdirectorios
+    if [ -d "$GDC_BASE/bin" ] && [ -d "$GDC_BASE/shared" ]; then
+        echo "[OK] greendevcorp structure correct"
+    else
+        echo "[ERROR] Missing bin or shared directory"
+        send_alert "Structure error in greendevcorp"
+    fi
+
+    # Verificar archivo done.log
+    if [ -f "$GDC_BASE/done.log" ]; then
+        echo "[OK] done.log exists"
+    else
+        echo "[ERROR] Missing done.log"
+        send_alert "Missing done.log"
+    fi
+
+    # Verificación de permisos bin (750) en formato octal (%a)
+    PERM_BIN=$(permisos "$GDC_BASE/bin" 2>/dev/null || echo "000")
+    if [ "$PERM_BIN" != "750" ]; then
+        echo "[ERROR] Wrong permissions on bin ($PERM_BIN)"
+        send_alert "Bad permissions on bin"
+    else
+        echo "[OK] bin permissions correct"
+    fi
+
+    # Verificación de permisos shared (3770)
+    PERM_SHARED=$(stat -c %a "$GDC_BASE/shared" 2>/dev/null || echo "000")
+    if [ "$PERM_SHARED" != "3770" ]; then
+        echo "[ERROR] Wrong permissions on shared ($PERM_SHARED)"
+        send_alert "Bad permissions on shared"
+    else
+        echo "[OK] shared permissions correct"
+    fi
+
+    # Verificación done.log (644)
+    PERM_LOG=$(permisos "$GDC_BASE/done.log" 2>/dev/null || echo "000")
+    if [ "$PERM_LOG" != "644" ]; then
+        echo "[ERROR] Wrong permissions on done.log ($PERM_LOG)"
+        send_alert "Bad permissions on done.log"
+    else
+        echo "[OK] done.log permissions correct"
+    fi
+
+    # Verificación avanzada: comparación real contra sistema original (checksum)
+    echo "[CHECK] Verifying snapshot consistency with source (checksum diff)..."
+
+    if rsync -avnc --delete /etc/ "$DIR/etc/" > /dev/null 2>&1; then
+        echo "[OK] /etc matches source (checksum)"
+    else
+        echo "[ERROR] Differences found in /etc"
+        send_alert "Checksum mismatch in /etc for $NAME snapshot"
+    fi
+
+    if rsync -avnc --delete /home/greendevcorp/ "$DIR/home/greendevcorp/" > /dev/null 2>&1; then
+        echo "[OK] /home/greendevcorp matches source (checksum)"
+    else
+        echo "[ERROR] Differences found in /home/greendevcorp"
+        send_alert "Checksum mismatch in greendevcorp for $NAME snapshot"
+    fi
+}
+
+permisos() {
+    local f="$1"
+
+    u=$(getfacl --absolute-names "$f" 2>/dev/null | grep '^user::' | cut -d: -f3)
+    g=$(getfacl --absolute-names "$f" 2>/dev/null | grep '^group::' | cut -d: -f3)
+    o=$(getfacl --absolute-names "$f" 2>/dev/null | grep '^other::' | cut -d: -f3)
+
+    perm_to_oct() {
+        local p="$1"
+        local r=0 w=0 x=0
+        echo "$p" | grep -q r && r=4
+        echo "$p" | grep -q w && w=2
+        echo "$p" | grep -q x && x=1
+        echo $((r + w + x))
+    }
+
+    ur=$(perm_to_oct "$u")
+    gr=$(perm_to_oct "$g")
+    or=$(perm_to_oct "$o")
+
+    echo "${ur}${gr}${or}"
+}
 
 echo "[1] Testing DAILY backups..."
 
-# Alternativa más segura a ls
-DAILY_BACKUPS=$(find "$BACKUP_DIR/daily" -type f -name "backup-*.tar.gz" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
+# Alternativa más segura a ordena por timestamp, se queda con la más reciente y solo la ruta de esa última versión
+DAILY_BACKUP=$(find "$BACKUP_DIR/daily" -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
 
-if [ -n "$DAILY_BACKUPS" ]; then
-    test_tar_backup "$DAILY_BACKUPS" "daily"
+if [ -n "$DAILY_BACKUP" ]; then
+    test_snapshot_backup "$DAILY_BACKUP" "daily"
 else
     echo "[ERROR] No daily backups found"
     send_alert "No daily backups found"
@@ -351,69 +464,38 @@ else
     send_alert "No monthly backups found"
 fi
 
-echo "[4] Testing FULL backups..."
+# RTOs de ambos casos para dar una idea del tiempo que se puede esperar
 
-FULL_BACKUP=$(find "$BACKUP_DIR/full" -type f -name "backup-*.tar.gz" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
+echo "[4] RTO simulation test..."
 
-if [ -n "$FULL_BACKUP" ]; then
-    test_tar_backup "$FULL_BACKUP" "full"
-else
-    echo "[ERROR] No full backups found"
-    send_alert "No full backups found"
-fi
-
-# No los restaura, solo comprueba que existan, si hay directios -> OK, de lo contrario -> ERROR
-
-echo "[5] Testing INCREMENTAL backups..."
-
-INC_DIR="$BACKUP_DIR/incremental"
-
-if [ -d "$INC_DIR" ]; then
-    COUNT=$(find "$INC_DIR" -type d | wc -l)
-    echo "Incremental directories found: $COUNT"
-
-    if [ "$COUNT" -gt 1 ]; then
-        echo "[OK] Incremental backups exist"
-
-        # Test básico encadenado
-        echo "Testing incremental chain..."
-        find "$INC_DIR" -type f -name "*.tar.gz" | while read f; do
-            if tar -tzf "$f" > /dev/null 2>&1; then
-                echo "[OK] Incremental archive OK -> $f"
-            else
-                echo "[ERROR] Corrupted incremental -> $f"
-                send_alert "Corrupted incremental backup: $f"
-            fi
-        done
-
-    else
-        echo "[ERROR] No incremental backups"
-        send_alert "No incremental backups"
-    fi
-else
-    echo "[ERROR] Incremental directory missing"
-    send_alert "Incremental directory missing"
-fi
-
-# RTO del caso más lento (Full Backup Restoration) para dar una idea del tiempo que se puede esperar
-
-echo "[6] RTO simulation test..."
-
-if [ -n "$FULL_BACKUP" ]; then
-    echo "Simulating restore timing..."
+if [ -n "$DAILY_BACKUP" ]; then
+    echo "Simulating DAILY restore timing..."
     START_TIME=$(date +%s)
 
-    time tar -xzf "$FULL_BACKUP" -C "$TEST_DIR"
+    # Restauración del snapshot (copia completa)
+    rsync -a "$DAILY_BACKUP/" "$TEST_DIR/daily_restore/"
 
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
 
-    echo "[OK] Restore simulation completed in ${DURATION}s"
+    echo "[OK] DAILY restore simulation completed in ${DURATION}s"
+fi
+
+if [ -n "$WEEKLY_BACKUPS" ]; then
+    echo "Simulating WEEKLY restore timing..."
+    START_TIME=$(date +%s)
+
+    time tar --acls --xattrs -xzf "$WEEKLY_BACKUPS" -C "$TEST_DIR"
+
+    END_TIME=$(date +%s)
+    DURATION=$((END_TIME - START_TIME))
+
+    echo "[OK] WEEKLY restore simulation completed in ${DURATION}s"
 fi
 
 # Limpieza del directorio de testing (se comprueba de todos modos al principio de cada test)
 
-echo "[7] Cleaning test environment..."
+echo "[5] Cleaning test environment..."
 rm -rf "$TEST_DIR"
 
 echo "Total errors detected: $ERRORS"
@@ -432,6 +514,8 @@ fi
 echo "================================================================================"
 echo "========================   END OF BACKUP TEST   ================================"
 echo "================================================================================"
+echo ""
+echo ""
 EOF
 
     sudo chmod 700 "$arxiu"

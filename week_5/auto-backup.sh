@@ -16,12 +16,8 @@ DOM=$(date +%d)
 
 # Directorios de backup
 # BACKUP_DIR: raíz de backups
-# FULL_DIR: backups completos (semanales)
-# INC_DIR: backups incrementales (diarios)
 # LOG_FILE: archivo de logs
 BACKUP_DIR="/var/backups"
-FULL_DIR="$BACKUP_DIR/full"
-INC_DIR="$BACKUP_DIR/incremental/$DATE"
 DAILY_DIR="$BACKUP_DIR/daily"
 WEEKLY_DIR="$BACKUP_DIR/weekly"
 MONTHLY_DIR="$BACKUP_DIR/monthly"
@@ -43,15 +39,12 @@ chmod 1700 $BACKUP_DIR
 #
 # /var/www -> Archivos web servidos por nginx
 #
-# /etc/letsencrypt -> Certificados SSL (HTTPS) para restaurar servicio web
-#
 # Incluye: datos + configuración + permisos
 SOURCE=(
 /etc
 /home/greendevcorp
 /opt
 /var/www
-/etc/letsencrypt
 )
 
 # EXCLUDE: Excluir del backup
@@ -77,15 +70,6 @@ echo "==========================================================================
 echo "Backup iniciado: $DATE"
 
 # Crear directorios si no existen
-if [ ! -d "$FULL_DIR" ]; then
-    echo "Creando directorio full: $FULL_DIR"
-    mkdir -p "$FULL_DIR"
-fi
-
-if [ ! -d "$INC_DIR" ]; then
-    echo "Creando directorio incremental: $INC_DIR"
-    mkdir -p "$INC_DIR"
-fi
 
 if [ ! -d "$DAILY_DIR" ]; then
     mkdir -p "$DAILY_DIR"
@@ -102,57 +86,63 @@ fi
 # BACKUP PRINCIPAL:
 # Domingo -> Full backup (copia completa con tar)
 # Resto de días -> Incremental (rsync)
+# Primer dia de cada mes -> Full backup de nuevo
 # rsync:
 #   copia solo cambios
 #   -aA preserva permisos
-if [ "$DAY" -eq 7 ]; then
-    echo "FULL BACKUP"
-    tar --acls --xattrs -czf "$FULL_DIR/backup-$DATE.tar.gz" "${SOURCE[@]}"
-else
-    echo "INCREMENTAL BACKUP"
-    rsync -aA --delete "${EXCLUDE[@]}" "${SOURCE[@]}" "$INC_DIR"
-fi
 
 # DAILY BACKUP (se guarda siempre)
-tar --acls --xattrs -czf "$DAILY_DIR/backup-$DATE.tar.gz" "${SOURCE[@]}"
+echo "DAILY BACKUP"
+SNAPSHOT_DIR="$DAILY_DIR/$DATE"
+PREV_DIR="$DAILY_DIR/latest"
+
+mkdir -p "$SNAPSHOT_DIR"
+
+# Si existe backup previo, usarlo como referencia
+if [ -e "$PREV_DIR" ]; then
+    LINK_DEST="--link-dest=$PREV_DIR"
+else
+    LINK_DEST=""
+fi
+
+# Ejecutar rsync (con o sin link-dest) y con paths relativo (R)
+if [ -n "$LINK_DEST" ]; then
+    rsync -aA --delete -R "$LINK_DEST" "${EXCLUDE[@]}" "${SOURCE[@]}" "$SNAPSHOT_DIR/"
+else
+    rsync -aA --delete -R "${EXCLUDE[@]}" "${SOURCE[@]}" "$SNAPSHOT_DIR/"
+fi
+
+ln -sfn "$SNAPSHOT_DIR" "$PREV_DIR"
 
 # WEEKLY BACKUP (domingo)
 if [ "$DAY" -eq 7 ]; then
     echo "WEEKLY BACKUP"
-    tar --acls --xattrs -czf "$WEEKLY_DIR/backup-weekly-$DATE.tar.gz" "${SOURCE[@]}"
+    tar --acls --xattrs -czf "$WEEKLY_DIR/backup-weekly-$DATE.tar.gz" "${SOURCE[@]}" 2>/dev/null
 fi
 
 # MONTHLY BACKUP (día 1 del mes)
 if [ "$DOM" -eq 01 ]; then
     echo "MONTHLY BACKUP"
-    tar --acls --xattrs -czf "$MONTHLY_DIR/backup-monthly-$DATE.tar.gz" "${SOURCE[@]}"
+    tar --acls --xattrs -czf "$MONTHLY_DIR/backup-monthly-$DATE.tar.gz" "${SOURCE[@]}" 2>/dev/null
 fi
 
-# Full backups -> borrar > 30 días
-# Incrementales -> borrar > 7 días
 echo "Limpieza de backups antiguos..."
-find "$BACKUP_DIR/full" -type f -mtime +30 -delete
-find "$BACKUP_DIR/incremental" -type d -mtime +7 -exec rm -rf {} \;
 
 # Retention policy nueva
 # Daily -> 7 días
 # Weekly -> 4 semanas (~28 días)
 # Monthly -> 12 meses (~365 días)
 
-find "$DAILY_DIR" -type f -mtime +7 -delete
-find "$WEEKLY_DIR" -type f -mtime +28 -delete
-find "$MONTHLY_DIR" -type f -mtime +365 -delete
-
-if [ $? -eq 0 ]; then
-    echo "Backup completado correctamente"
-else
-    echo "Error en el backup"
-fi
+find "$DAILY_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} + # {} + : para agrupar el contenido y ejecutar la
+find "$WEEKLY_DIR" -type f -mtime +28 -delete                                 # instrucción sobre todos, aquí "*" no funciona porque
+find "$MONTHLY_DIR" -type f -mtime +365 -delete                               # no permitiría filtrar por antigüedad
 
 echo "Backup completado"
 
 echo "================================================================================"
 echo "==========================     END OF BACKUP     ==============================="
 echo "================================================================================"
+echo ""
+echo ""
 
 sudo ./test-backup.sh
