@@ -260,6 +260,7 @@ Instruccions d'ús:
 2. Executar l'script: ./system-backup.sh (es recomana fer-ho amb privilegis de sudo per poder llegir fitxers de configuració protegits a /etc/).
 
 > Nota: El resultat final és un fitxer amb extensió .tar.gz.gpg. Per recuperar les dades, caldrà utilitzar la comanda gpg -d introduint la frase de pas definida a l'script.
+
 ## Week 2
 
 **Descripció de l'Arquitectura de Serveis**
@@ -390,6 +391,85 @@ Instruccions d'ús:
 
 ## Week 3
 
+**Explicació dels conceptes de processos**
+
+Per entendre com administrem el servidor, cal definir els conceptes clau que hem implementat en els nostres scripts:
+
++ Processos Pare i Fill: Quan executem l'script workload.sh, aquest actua com a Pare (PID). En llançar la comanda yes, crea un Fill (YES_PID). Si el pare mor sense tancar el fill, aquest es converteix en un procés orfe.
+
++ Signals (Senyals): Són interrupcions de programari enviades a un procés per notificar-li un esdeveniment. Hem practicat amb:
+
+    - SIGTERM (15): Petició de terminació amable.
+
+    - SIGKILL (9): Terminació forçosa (no es pot ignorar).
+
+    - SIGHUP (1): Tradicionalment usat per recarregar fitxers de configuració.
+
++ Context Switching: El canvi que fa la CPU entre un procés i un altre. L'hem monitorat a process-metrics.sh per veure si un procés està "lluitant" massa pel temps de processador.
+
+**Resolució de problemes**
+
+Si un usuari reporta lentitud, el protocol d'actuació amb les nostres eines és:
+
+1. Identificar el culpable: Executar *./process-monitor.sh*. Ens mostrarà el Top 25 de processos. Si un procés ocupa més del 80% de CPU o molta RAM (RSS), ja tenim un candidat.
+
+2. Analitzar la jerarquia: Executar *./process-tree.sh* <PID>. És un procés independent o és un fill d'un altre procés que s'ha descontrolat?
+
+3. Investigar el coll d'ampolla: Executar *./process-metrics.sh* <PID>.
+
+    - Revisar I/O (Disc): Si les lectures/escriptures en KB són molt altes, el disc és el problema.
+
+    - Revisar File Descriptors: Si està prop del 100% del límit, el procés fallarà aviat perquè no pot obrir més fitxers o connexions.
+
+4. Acció correctiva: Si el procés no és crític, provar un kill -15 (Graceful). Si no respon, usar kill -9.
+
+**Exemples de Tractament de Senyals i Tancament Controlat**
+
+En l'script *workload.sh*, hem demostrat com un programa professional hauria de gestionar la seva sortida:
+
++ Graceful Shutdown: Mitjançant la funció clean_and_exit i el trap SIGTERM, l'script garanteix que, abans de morir ell mateix, envia un senyal de tancament al seu fill (yes). Això evita deixar "escombraries" o processos orfes consumint CPU en segon pla.
+
+Exemple pràctic:
+
+    # Des de la terminal 2
+    kill -SIGTERM <PID_PARE>
+    # Resultat: El pare diu "Tancament Graciós" i mata el fill automàticament.
+
+**Demostració de Control de Processos i Limitació de Recursos**
+
+Hem implementat el control de recursos de dues maneres diferents:
+
++ Limiting via Systemd (Estructural)
+    En el fitxer *backup.service* de la Setmana 2, hem definit límits estrictes:
+        - CPUQuota=50%: El procés de backup mai podrà fer que el servidor vagi lent per a la resta d'usuaris, ja que només pot usar la meitat d'un nucli de CPU.
+        - MemoryMax=2G: Evitem que un error en la compressió del backup esgoti tota la RAM del sistema (OOM - Out Of Memory).
+
++ Monitoring via /proc (Observacional)
+
+    Amb l'script *process-metrics.sh*, demostrem el control de límits del sistema llegint /proc/<PID>/limits.
+
+    Cas d'ús: Monitoritzem el "Max open files". Si un servidor web arriba al seu "Soft Limit", començarà a donar errors 500. El nostre script ens permet preveure aquest error abans que passi visualitzant el percentatge d'ús del límit.
+
+**Base de rendiment: Normal vs. Anormal**
+
+Definim el comportament estàndard del nostre servidor per poder detectar anomalies ràpidament:
+
++ CPU Load
+	- Normal: Entre 5% i 20% en repòs.	                
+    - Anormal: > 80% de forma sostinguda durant 5 min.
++ Memòria (RSS)	
+    - Normal: Pocs MB.	
+    - Anormal: Creixement constant o Swap alt.
++ Processos	
+    - Normal: Jerarquia neta des de systemd.	
+    - Anormal: Aparició de processos "zombis".
++ Fitxers oberts
+    - Normal: < 10% del límit.	
+    - Anormal: > 70% del límit (Risc de col·lapse del servei).
++ I/O Disc	
+    - Normal: Pocs KB/s excepte durant el backup.	
+    - Anormal: Lectura/Escriptura constant sense motiu aparent.
+
 ### top-resource-consumers.sh
 
 L'script **top-resource-consumers.sh** és una eina de diagnòstic ràpid dissenyada per oferir visibilitat sobre l'estat de càrrega del servidor. Permet identificar en pocs segons quins serveis o usuaris estan saturant els recursos de hardware.
@@ -509,5 +589,220 @@ Instruccions d'ús:
 > Nota: Obre una segona terminal i utilitza les comandes kill que l'script t'ha mostrat per pantalla per observar el comportament del sistema.
 
 ## Week 4
+
+**Disseny d'Usuaris i Grups**
+
+El disseny d'usuaris de GreenDevCorp es basa en el Principi de Mínim Privilegi i en la Segregació de Funcions.
+
++ Grup greendevcorp: S'ha creat com l'àncora de tota l'activitat de l'empresa. En lloc de donar permisos individualment, els gestionem a nivell de grup per facilitar l'escalabilitat.
+
++ Usuaris de Sistema vs. Humans: Hem separat clarament els usuaris que executen serveis (com backupuser) dels desenvolupadors (dev1, dev2, etc.). Els usuaris de sistema no tenen accés a la terminal (nologin) per evitar que siguin una porta d'entrada per a atacants.
+
++ Seguretat en el Login: Obligar al canvi de contrasenya en el primer accés garanteix que només l'usuari final coneix la seva credencial, eliminant la traça de contrasenyes genèriques en els xats o documents de l'empresa.
+
+**Explicació del model de permissos**
+
+Hem implementat un model híbrid que combina els permisos estàndard de Linux amb extensions avançades:
+
++ Permisos Estàndard (UGO): Fem servir 700 a les /home per garantir privacitat total i 750 en directoris binaries per permetre l'execució només al grup.
+
++ SetGID (2): Aplicat a /shared. És vital perquè qualsevol fitxer nou "neixi" ja propietat del grup greendevcorp, evitant que els companys hagin de demanar permisos cada cop que algun membre puja un document.
+
++ Sticky Bit (1): Aplicat a /shared. Actua com un "segur" contra esborrats accidentals: encara que tots tinguin permís d'escriptura, només el creador d'un fitxer el pot eliminar.
+
++ ACLs (Access Control Lists): Les fem servir per a casos excepcionals (com donar permís d'escriptura a dev1 sobre un log de root) on els permisos estàndard es queden curts.
+
+**Resolució de problemes**
+
+Si un desenvolupador no pot accedir a un fitxer compartit, segueix aquest checklist:
+
+1. Verificar Grups: Comprova si l'usuari és realment membre del grup:
+        
+        groups <usuari>
+
+2. Verificar Permisos de Directori: Recorda que per accedir a un fitxer, l'usuari necessita permís d'execució (x) en totes les carpetes superiors de la ruta.
+
+3. Check ACLs: El ls -l podria no mostrar-ho tot. Busca el signe + al final dels permisos i usa:
+    
+        getfacl <ruta_fitxer>
+
+4. Test d'Identitat: Prova d'entrar com l'usuari i llegir el fitxer:
+    
+        sudo -u <usuari> cat <ruta_fitxer>
+
+**Com afegir nous usuaris a l'equip?**
+
+Per afegir un nou membre a GreenDevCorp de forma segura i ràpida:
+1. Creació del compte
+
+    Utilitza l'script de provisionament per garantir que s'apliquen totes les polítiques:
+
+        # Edita l'array USERS a user-group-structure.sh amb el nou nom
+        sudo ./user-group-structure.sh
+
+2. Configuració de límits
+
+    Verifica que el nou usuari hereta els límits de recursos automàticament:
+
+        sudo -u <nou_usuari> ulimit -a
+
+3. Lliurament de credencials
+
+    - Informa a l'usuari de la seva contrasenya temporal (milax).
+
+    - Informa que el sistema li demanarà un canvi immediat en entrar per primer cop.
+
+    - Explica que el seu espai de treball compartit es troba a /home/greendevcorp/shared.
+
+4. Verificació d'accés
+
+    Demana a l'usuari que creï un fitxer de test al directori shared per confirmar que el SetGID funciona:
+
+        touch /home/greendevcorp/shared/test_<nom>.txt
+        ls -l /home/greendevcorp/shared/test_<nom>.txt  # Ha de sortir grup: greendevcorp
+
+### user-group-structure.sh
+
+L'script **user-group-structure.sh** té com a objectiu automatitzar el desplegament del capital humà de la startup en el servidor, aplicant polítiques de seguretat d'accés i organització de grups des del moment de la creació.
+
+Funcionalitats Implementades:
+
++ Gestió de Grups Corporatius:
+
+    - Creació del grup greendevcorp, que serveix com a base per gestionar permisos compartits en directoris de projectes futurs.
+
++ Provisioning d'Usuaris Automatitzat:
+
+    - Funció Modular: L'ús de la funció add_user permet afegir desenes d'usuaris simplement modificant una llista (array), facilitant l'escalabilitat del sistema.
+
+    - Configuració de Shell: S'assigna /bin/bash per defecte, garantint un entorn de treball complet per als desenvolupadors.
+
++ Polítiques de Seguretat Activa:
+
+    - Rotació Obligatòria: S'implementa la comanda chage -d 0, que obliga l'usuari a triar una contrasenya nova i personal en el seu primer accés, evitant que les contrasenyes per defecte quedin actives.
+
+    - Privacitat de Dades: S'aplica un hardening immediat sobre els directoris /home amb permisos 700, impedint que els desenvolupadors puguin tafanejar en els fitxers dels seus companys.
+
++ Robustesa de l'Script:
+
+    - Verificació de Privilegis: L'script s'atura si no es detecten permisos de root, evitant execucions parcials fallides.
+
+    - Idempotència: Comprova l'existència prèvia de l'usuari abans d'intentar crear-lo, permetent re-executar l'script per afegir nous membres sense afectar els actuals.
+
+Instruccions d'ús:
+
+1. Donar permisos d'execució: chmod +x user-group-structure.sh
+
+2. Executar amb privilegis d'administrador: sudo ./user-group-structure.sh
+
+### directory-structure.sh
+
+L'script **directory-structure.sh** estableix la jerarquia de fitxers operativa de la startup, implementant mecanismes avançats de control d'accés per fomentar el treball col·laboratiu segur.
+
+Funcionalitats Implementades:
+
++ Espais de Treball Especialitzats:
+
+    - Directori d'Eines (/bin): Centralitza els scripts útils per a l'empresa. S'utilitzen ACLs (Access Control Lists) per defecte per assegurar que qualsevol eina nova sigui immediatament utilitzable pel grup, eliminant la necessitat de canvis de permisos manuals constants.
+
+    - Directori de Projectes (/shared): Espai dissenyat per al desenvolupament conjunt.
+
++ Seguretat Avançada de Fitxers:
+
+    - Mecanisme SetGID (2): Garanteix la consistència grupal; tot fitxer creat dins del directori compartit pertanyerà automàticament al grup greendevcorp, facilitant la lectura entre companys.
+
+    - Implementació del Sticky Bit (1): Protecció contra el vandalisme accidental o malintencionat. Encara que tots tinguin permisos d'escriptura al directori, ningú pot eliminar fitxers que no hagi creat ell mateix.
+
++ Gestió Selectiva de Permisos:
+
+    - Auditoria i Logs: El fitxer done.log demostra la capacitat de delegar funcions específiques. Mitjançant ACLs, es permet que l'usuari dev1 escrigui en un fitxer propietat de root, mantenint el control total del sistema però habilitant la funcionalitat necessària per a l'operació.
+
++ Privacitat i Aïllament:
+
+    - Tots els directoris estan configurats per bloquejar l'accés a usuaris que no pertanyin al grup, blindant la propietat intel·lectual de la startup.
+
+Instruccions d'ús:
+
+1. Donar permisos d'execució: chmod +x directory-structure.sh
+
+2. Executar com a administrador: sudo ./directory-structure.sh
+
+### resource-limits.sh
+
+L'script **resource-limits.sh** implementa una capa de control sobre el consum de hardware del servidor, protegint l'estabilitat del sistema operatiu davant de possibles abusos de recursos per part dels usuaris del grup de desenvolupament.
+
+Funcionalitats Implementades:
+
++ Control de Consum de CPU i Memòria:
+
+    - Límits de temps de CPU: Estableix un màxim de 20-30 minuts de temps de processador per procés, evitant que scripts mal programats o bucles infinits segrestin el servidor de forma permanent.
+        * Per què?: Els desenvolupadors solen executar scripts de test o compilacions curtes. 20 minuts de temps de CPU pur és molt superior al que necessita una tasca normal.
+
+        * Objectiu: Aturar processos que hagin entrat en un bucle infinit o càlculs criptogràfics no autoritzats abans que degradin la resposta global del servidor.
+
+    - Restricció d'Address Space (as): Limita la memòria virtual a un màxim de 2GB per usuari, prevenint que un sol desenvolupador esgoti la RAM disponible (atacs DoS accidentals).
+        * Per què?: El servidor té 4GB totals. Si un usuari n'ocupa 3GB, el sistema començarà a fer servir la Swap (disc), tornant el servidor extremadament lent per a tothom.
+
+        * Objectiu: Prevenir fugues de memòria en aplicacions en desenvolupament. Limitar a 2GB assegura que, fins i tot en el pitjor dels casos, el sistema operatiu tingui memòria lliure per seguir funcionant.
+
++ Gestió de la Capacitat del Kernel:
+
+    - Límit de Processos (nproc): Restringeix el nombre de processos i fils (threads) a 150 per usuari. Això és vital per prevenir les conegudes "fork bombs" que podrien bloquejar totalment el kernel.
+        * Per què?: Cada procés ocupa una entrada a la taula del Kernel. Un usuari normal de terminal rarament en necessita més de 20-30 (incloent-hi fills).
+
+        * Objectiu: Protecció contra Fork Bombs. Si un script comença a replicar-se sense control, el sistema el bloquejarà en arribar a 150, evitant que el Kernel es quedi sense identificadors de procés (PIDs) i s'hagi de reiniciar la màquina.
+
+    - Descriptors de Fitxer (nofile): Controla quants fitxers pot tenir oberts un usuari. Això obliga els desenvolupadors a escriure codi eficient i evita la degradació del sistema de fitxers.
+        * Per què?: Linux tracta gairebé tot com a fitxers (sockets de xarxa, pipes, fitxers de text). 1024 és el valor estàndard per a usuaris de sistema, suficient per a qualsevol tasca de desenvolupament habitual.
+
+        * Objectiu: Evitar que un procés mal programat segresti tots els file descriptors del sistema..
+
++ Diferenciació de Límits (Soft vs. Hard):
+
+    - Soft Limits: Actuen com un avís; l'usuari pot superar-los temporalment fins a arribar al límit "Hard".
+
+    - Hard Limits: Són infranquejables i només poden ser modificats per l'administrador (root).
+
++ Integració amb el Sistema PAM:
+
+    - L'script garanteix que el mòdul pam_limits.so estigui actiu en la configuració de sessió comuna del sistema, assegurant que les restriccions s'apliquin de forma automàtica en cada inici de sessió (SSH o local).
+
+Instruccions d'ús:
+
+1. Donar permisos d'execució: chmod +x resource-limits.sh
+
+2. Executar amb privilegis de root: sudo ./resource-limits.sh
+
+3. Per verificar els límits aplicats com a usuari, utilitzar la comanda: ulimit -a
+
+### test-user-limits.sh
+
+L'script **test-user-limits.sh** és una eina de verificació de polítiques de seguretat. La seva funció és simular un comportament anòmal d'una aplicació per confirmar que els límits imposats mitjançant el mòdul PAM (pam_limits.so) s'apliquen correctament i protegeixen el servidor de la denegació de servei (DoS).
+
+Funcionalitats Implementades:
+
++ Validació de Context de Grups:
+
+    - L'script verifica si l'usuari executor pertany al grup greendevcorp. Això és crucial, ja que si s'executa com a root o com a usuari sense restriccions, els tests podrien saturar la màquina real en no trobar límits.
+
++ Simulació de Saturació de Recursos:
+
+    - Test de Fitxers: Obre descriptors de fitxer massivament fins a assolir el límit nofile. Això valida la protecció contra processos que bloquegen el sistema d'I/O.
+
+    - Test de Processos (Fork Bomb controlada): Crea processos en segon pla fins que el kernel denega la creació d'un de nou (nproc), verificant la protecció contra l'esgotament de la taula de processos.
+
+    - Test de Memòria Virtual: Assigna blocs de 50MB a la memòria RAM fins a arribar al límit as. Això assegura que un procés amb una fuga de memòria no esgotarà la memòria física del servidor.
+
++ Informe de Resultats en Temps Real:
+
+    - L'script mostra comptadors actius durant les proves, permetent a l'administrador visualitzar exactament en quin punt el sistema operatiu intervé per aturar l'escalada de recursos.
+
+Instruccions d'ús:
+
+1. Copiar l'script a una carpeta accessible (ex: /tmp).
+
+2. Executar com a usuari restringit: sudo -u dev1 -i /tmp/test-user-limits.sh.
+
+3. Seleccionar el test desitjat i observar com el sistema bloqueja l'execució en arribar al valor "Hard" definit en la configuració.
 
 ## Week 5

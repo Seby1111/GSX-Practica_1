@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# ==============================================================================
+# SCRIPT DE CONFIGURACIÓ DE LÍMITS DE RECURSOS (PAM LIMITS)
+# Objectiu: Establir quotes de CPU, memòria i processos per al grup 'greendevcorp'.
+# ==============================================================================
+
 # Comprovem si l'script s'executa com a root
 if [[ $EUID -ne 0 ]]; then
    echo "[!] Aquest script s'ha d'executar com a root (fent servir sudo)."
@@ -8,7 +13,7 @@ fi
 
 echo "[INFO] Configurant límits de recursos via PAM..."
 
-# Creem el fitxer de configuració
+# Usem un fitxer separat a limits.d per no embrutar el fitxer principal del sistema
 cat <<EOF > /etc/security/limits.d/user_limits.conf
 #<domain>      <type>  <item>         <value>
 
@@ -22,8 +27,9 @@ cat <<EOF > /etc/security/limits.d/user_limits.conf
 @greendevcorp hard    nofile          1024        
 EOF
 
-# Verificació de PAM
 echo "[INFO] Verificant mòdul pam_limits.so..."
+
+# Ens assegurem que el sistema realment llegeixi els fitxers de límits al fer login
 if ! grep -q "pam_limits.so" /etc/pam.d/common-session; then
     echo "session required pam_limits.so" >> /etc/pam.d/common-session
     echo "[OK] Mòdul PAM afegit a common-session."
