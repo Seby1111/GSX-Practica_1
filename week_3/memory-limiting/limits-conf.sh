@@ -31,8 +31,8 @@ LimitNOFILE=65536
 # PROCESS LIMITS
 LimitNPROC=4096
 TasksMax=500
-# NICE (CPU PRIORITY) // A bit less priority
-Nice=5
+# NICE (CPU PRIORITY) // A bit more priority
+Nice=-2
 EOF
 
 sudo systemctl daemon-reload
