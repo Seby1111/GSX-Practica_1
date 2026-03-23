@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# Archivo a modificar
+# Fitxer a modificar
 JOURNAL_CONF="/etc/systemd/journald.conf"
 
-# Backup del archivo original
+# Backup del fitxer original
 sudo cp "$JOURNAL_CONF" "${JOURNAL_CONF}.bak"
-echo "Backup creado en ${JOURNAL_CONF}.bak"
+echo "Backup creat a ${JOURNAL_CONF}.bak"
 
-# Función para actualizar un valor
+# Funció per actualitzar un valor
 update_journal_conf() {
     local key="$1"
     local value="$2"
 
-    # Si la linea está comentada o existe, reemplaza; si no existe, la agrega
+    # Si la línia està comentada o existeix, reemplaça; si no existeix, l'afegeix
     if grep -q "^#\?$key=" "$JOURNAL_CONF"; then
         sudo sed -i "s|^#\?$key=.*|$key=$value|" "$JOURNAL_CONF"
     else
@@ -20,17 +20,17 @@ update_journal_conf() {
     fi
 }
 
-# Modificar valores:
+# Modificar valors:
 
-# Espacio máximo que pueden ocupar los logs persistentes en disco
+# Espai màxim que poden ocupar els logs persistents en disc
 update_journal_conf "SystemMaxUse" "200M"
-# Mantener siempre libres al menos 1 GB de disco
+# Mantenir sempre lliures almenys 1 GB de disc
 update_journal_conf "SystemKeepFree" "1G"
-# Tamaño máximo por archivo de log antes de rotar
+# Mida màxima per fitxer de log abans de rotar
 update_journal_conf "SystemMaxFileSize" "20M"
-# Número máximo de archivos rotados
+# Nombre màxim de fitxers rotats
 update_journal_conf "SystemMaxFiles" "5"
-# Espacio máximo para logs temporales (runtime, en RAM)
+# Espai màxim per logs temporals (runtime, en RAM)
 update_journal_conf "RuntimeMaxUse" "100M"
 
-echo "Configuración de journal.conf actualizada correctamente."
+echo "Configuracio de journal.conf actualitzada correctament."

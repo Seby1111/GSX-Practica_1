@@ -1,7 +1,8 @@
+#!/bin/bash
+
 CONF="/etc/systemd/system/nginx.service"
 
-
-# Función para actualizar un valor
+# Funció per actualitzar un valor
 update_conf() {
     local key="$1"
     local value="$2"
@@ -12,7 +13,7 @@ update_conf() {
     fi
 }
 
-# Crear override para nginx
+# Crear override per nginx
 sudo mkdir -p /etc/systemd/system/nginx.service.d
 sudo tee /etc/systemd/system/nginx.service.d/limits.conf > /dev/null <<EOF
 [Service]
@@ -38,7 +39,7 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl restart nginx
 
-echo "Limites de nginx aplicados correctamente."
+echo "Limits de nginx aplicats correctament."
 
 CONF="/etc/systemd/system.conf"
 
@@ -46,18 +47,18 @@ update_conf DefaultLimitNOFILE 65536
 update_conf DefaultLimitNPROC 4096
 update_conf DefaultTasksMax 500
 
-echo "Configuración general de sistema aplicada correctamente."
+echo "Configuració general de sistema aplicada correctament."
 
-# System level daemon-reload (acabamos de modificiar configuración global)
+# System level daemon-reload (ac acabat de modificar configuració global)
 sudo systemctl daemon-reexec
 
 CONF="/etc/security/limits.conf"
 
-# Configuración para la máquina virtual, la idea del número de ficheros es tener una configuración generosa que te avisa cuando
-# empiezas a gastar muchos recursos, pero dentro de lo que cabe es funcional, el hard limit es el doble para usuarios que quieren
-# gastar más recursos por cualquier razón, para tener un buen margén entre el usuario promedio y el excepcionalmente pesado en uso
-# de recursos. El límite de procesos intenta ser lo suficientemente alto para prácticidad pero no excesivo para ceñirnos a los 2GB
-# de memoria.
+# Configuració per la màquina virtual, la idea del nombre de fitxers és tenir una configuració generosa que t'avisa quan
+# comences a gastar molts recursos, però dins del que es pot és funcional, el hard limit és el doble per usuaris que volen
+# gastar més recursos per qualsevol raó, per tenir un bon marge entre l'usuari mitjà i l'excepcionalment pesat en ús
+# de recursos. El límit de processos intenta ser prou alt per practicitat però no excessiu per ceñir-nos als 2GB
+# de memòria.
 LINES=(
 "sshuser soft nofile 4096"
 "sshuser hard nofile 8192"
@@ -71,15 +72,15 @@ LINES=(
 
 for LINE in "${LINES[@]}"; do
 if ! grep -Fxq "$LINE" "$CONF"; then
-echo "Añadiendo: $LINE"
+echo "Afegint: $LINE"
 echo "$LINE" | sudo tee -a "$CONF" > /dev/null
 else
-echo "Ya existe: $LINE"
+echo "Ja existeix: $LINE"
 fi
 done
 
-echo "Acabado de comprobar $CONF"
+echo "Acabat de comprovar $CONF"
 
-echo "Modificación de /etc/security/limits.conf aplicada."
+echo "Modificació de /etc/security/limits.conf aplicada."
 
-echo "Para aplicar los cambios hace falta cerrar y volver a iniciar la sesión."
+echo "Per aplicar els canvis cal tancar i tornar a iniciar la sessió."

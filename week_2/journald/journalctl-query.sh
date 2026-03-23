@@ -1,14 +1,14 @@
 #!/bin/bash
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <service-name>"
+    echo "Us: $0 <nom-del-servei>"
     exit 1
 fi
 
 SERVICE="$1"
 
 if ! systemctl list-unit-files --type=service | grep -q "^${SERVICE}.service"; then
-    echo "Not a service"
+    echo "No es un servei"
     exit 1
 fi
 

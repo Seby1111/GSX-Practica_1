@@ -7,15 +7,15 @@ if [ ! -f "$arxiu" ]; then
 
     sudo tee "$arxiu" > /dev/null << 'EOF'
 
-/var/log/nginx/*.log {          # Selecciona todos los archivos de log de nginx en /var/log/nginx
-    daily                        # Rota los logs (cada día)
-    rotate 14                     # Mantiene los últimos 14 archivos rotados, los más antiguos se eliminan
-    compress                      # Comprime los archivos rotados para ahorrar espacio (gzip)
-    delaycompress                 # No comprime el último log rotado inmediatamente, se comprime en la siguiente rotación
-    missingok                     # No genera error si el archivo de log no existe
-    notifempty                    # No rota el archivo si está vacío
-    create 0640 www-data adm      # Crea un nuevo archivo de log con permisos 0640 y propietario www-data, grupo adm
-    sharedscripts                 # Si hay varios logs coincidentes, ejecuta los scripts postrotate solo una vez
+/var/log/nginx/*.log {          # Selecciona tots els arxius de log de nginx a /var/log/nginx
+    daily                        # Rota els logs (cada dia)
+    rotate 14                     # Manté els últims 14 arxius rotats, els més antics s'eliminen
+    compress                      # Comprimeix els arxius rotats per estalviar espai (gzip)
+    delaycompress                 # No comprimeix l'últim log rotat immediatament, es comprimeix en la següent rotació
+    missingok                     # No genera error si l'arxiu de log no existeix
+    notifempty                    # No rota l'arxiu si està buit
+    create 0640 www-data adm      # Crea un nou arxiu de log amb permisos 0640 i propietari www-data, grup adm
+    sharedscripts                 # Si hi ha diversos logs coincidents, executa els scripts postrotate només una vegada
     postrotate
         if systemctl -q is-active nginx; then
             systemctl reload nginx > /dev/null 2>&1 || true 
@@ -24,20 +24,20 @@ if [ ! -f "$arxiu" ]; then
 }
 EOF
 
-    sudo chmod 600 "$arxiu" # Permisos de lectura y escritura para root, sin permisos para otros usuarios, para proteger la configuración de logrotate (que no se sepan los intervalos de rotación ni los archivos de log que se están rotando)
+    sudo chmod 600 "$arxiu" # Permisos de lectura i escriptura per root, sense permisos per altres usuaris, per protegir la configuració de logrotate (que no es coneguin els intervals de rotació ni els arxius de log que es roten)
 else
-    # Comparar el contenido actual con lo deseado y actualizar solo si es distinto
+    # Comparar el contingut actual amb el desitjat i actualitzar només si és diferent
     sudo tee /tmp/nginx_tmp > /dev/null << 'EOF'
 
-/var/log/nginx/*.log {          # Selecciona todos los archivos de log de nginx en /var/log/nginx
-    daily                        # Rota los logs (cada día)
-    rotate 14                     # Mantiene los últimos 14 archivos rotados, los más antiguos se eliminan
-    compress                      # Comprime los archivos rotados para ahorrar espacio (gzip)
-    delaycompress                 # No comprime el último log rotado inmediatamente, se comprime en la siguiente rotación
-    missingok                     # No genera error si el archivo de log no existe
-    notifempty                    # No rota el archivo si está vacío
-    create 0640 www-data adm      # Crea un nuevo archivo de log con permisos 0640 y propietario www-data, grupo adm
-    sharedscripts                 # Si hay varios logs coincidentes, ejecuta los scripts postrotate solo una vez
+/var/log/nginx/*.log {          # Selecciona tots els arxius de log de nginx a /var/log/nginx
+    daily                        # Rota els logs (cada dia)
+    rotate 14                     # Manté els últims 14 arxius rotats, els més antics s'eliminen
+    compress                      # Comprimeix els arxius rotats per estalviar espai (gzip)
+    delaycompress                 # No comprimeix l'últim log rotat immediatament, es comprimeix en la següent rotació
+    missingok                     # No genera error si l'arxiu de log no existeix
+    notifempty                    # No rota l'arxiu si està buit
+    create 0640 www-data adm      # Crea un nou arxiu de log amb permisos 0640 i propietari www-data, grup adm
+    sharedscripts                 # Si hi ha diversos logs coincidents, executa els scripts postrotate només una vegada
     postrotate
         if systemctl -q is-active nginx; then
             systemctl reload nginx > /dev/null 2>&1 || true 

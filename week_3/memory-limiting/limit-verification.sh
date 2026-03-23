@@ -1,32 +1,32 @@
 #!/bin/bash
 
-# Script completo de verificación de Resource Limits
-# Incluye:
-#   - Límites systemd por servicio
-#   - Límites PAM / ulimit
-#   - Prueba ligera de CPU y memoria
-#   - Logs recientes de cada servicio
+# Script complet de verificació de Resource Limits
+# Inclou:
+#   - Límits systemd per servei
+#   - Límits PAM / ulimit
+#   - Prova lleugera de CPU i memòria
+#   - Logs recents de cada servei
 
 SERVICES=("nginx.service" "cpu-limit.service")
 
-echo "INICIO DE VERIFICACIÓN DE LIMITES"
+echo "INICI DE VERIFICACIÓ DE LÍMITS"
 
-# Verificación por servicio
+# Verificació per servei
 echo ""
-echo "VERIFICACIÓN DE LIMITES POR SERVICIO"
+echo "VERIFICACIÓ DE LÍMITS PER SERVEI"
 for svc in "${SERVICES[@]}"; do
     echo ""
-    echo "Servicio: $svc"
+    echo "Servei: $svc"
     MAINPID=$(systemctl show "$svc" -p MainPID --value)
     if [ -z "$MAINPID" ] || [ "$MAINPID" -eq 0 ]; then
-        echo "El servicio no está iniciado"
+        echo "El servei no està iniciat"
         continue
     else
-        echo "El servicio está iniciado"
+        echo "El servei està iniciat"
     fi
     echo "PID principal: $MAINPID"
 
-    # Cgroups activos
+    # Cgroups actius
     valor=$(cat /proc/$MAINPID/cgroup)
     echo "Cgroups: $valor"
 done
@@ -34,29 +34,29 @@ done
 SERVICE="nginx.service"
 MAINPID=$(systemctl show "$SERVICE" -p MainPID --value)
 CGROUP=$(cat /proc/$MAINPID/cgroup | grep "0::" | cut -d: -f3)
-echo "Límites cgroup para $SERVICE:"
+echo "Límits cgroup per a $SERVICE:"
 systemctl show nginx.service -p MemoryCurrent,MemoryLimit,CPUQuota,TasksMax,LimitNOFILE
 echo "CPUQuota="$(cat /sys/fs/cgroup$CGROUP/cpu.max | cut -d " " -f1 2>/dev/null)
 
-# Verificación de PAM
+# Verificació de PAM
 echo ""
-echo "Valores definidos en /etc/security/limits.conf:"
+echo "Valors definits a /etc/security/limits.conf:"
 grep -E "nofile|nproc" /etc/security/limits.conf | grep -v "^#"
 
-# Prueba ligera de límites
+# Prova lleugera de límits
 echo ""
-echo "PRUEBA LIGERA DE LÍMITES"
-echo "Se generará una carga breve para verificar que los límites se aplican."
+echo "PROVA LLEUGERA DE LÍMITS"
+echo "Es generarà una càrrega breu per verificar que els límits s'apliquen."
 
-# CPU test: ejecutar 'yes' 3s y medir %CPU
+# CPU test: executar 'yes' 3s i mesurar %CPU
 for svc in "${SERVICES[@]}"; do
-    echo "Probando CPU $svc (3 segundos)..."
+    echo "Provant CPU $svc (3 segons)..."
     YES_PID=$(yes > /dev/null & echo $!)
     sleep 3
     CPU_TEST=$(ps -p $YES_PID -o %cpu --no-headers 2>/dev/null || echo "0")
     kill $YES_PID &>/dev/null
-    echo "$svc: CPU usada en la prueba: $CPU_TEST %"
+    echo "$svc: CPU usada en la prova: $CPU_TEST %"
 done
 
 echo ""
-echo "Verificación completada."
+echo "Verificació completada."

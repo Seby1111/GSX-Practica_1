@@ -1,5 +1,5 @@
 [Unit]
-Description=Run backup daily at 2 AM
+Description=Executar Backup diàriament a les 2 de la matinada (AM)
 
 [Timer]
 OnCalendar=*-*-* 02:00:00

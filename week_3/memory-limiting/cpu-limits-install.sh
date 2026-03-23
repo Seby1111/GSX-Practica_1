@@ -7,27 +7,27 @@ if [ ! -f "$arxiu" ]; then
 
     sudo tee "$arxiu" > /dev/null << 'EOF'
 [Unit]
-Description=CPU Limited Test Service
+Description=Servei de prova amb límit de CPU
 After=network.target
 
 [Service]
 ExecStart=/usr/bin/yes
 Restart=always
 
-# CPU limit
+# Límit de CPU
 CPUQuota=50%
 
-# Memory limits
+# Límits de memòria
 MemoryHigh=128M
 MemoryMax=256M
 
-# Process limits
+# Límits de processos
 TasksMax=50
 
-# File descriptors
+# Descriptors de fitxers
 LimitNOFILE=4096
 
-# Lower priority
+# Prioritat més baixa
 Nice=10
 
 [Install]

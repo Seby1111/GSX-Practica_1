@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# Y SI ALGUIEN CAMBIA LOS ALIAS DESPUES DE QUE ESTÉ ESTE SCRIPT INSTALADO? COMO LO SOLUCIONARIAMOS? PENSAR PARA TODOS LOS SCRIPTS CON LÓGICA ASÍ
-
 arxiu="/etc/profile.d/greendevcorp-shell-configuration.sh"
 
 if [ ! -f "$arxiu" ]; then
@@ -10,32 +8,32 @@ if [ ! -f "$arxiu" ]; then
     sudo tee "$arxiu" > /dev/null << 'EOF'
 #!/bin/bash
 
-# Solo para miembros del grupo greendevcorp
+# Només per a membres del grup greendevcorp
 if id -nG "$USER" | grep -qw "greendevcorp"; then
 
-    # Configuración compartida del equipo:
+    # Configuració compartida de l'equip:
 
-    # PATH adicional para scripts del grupo
+    # PATH addicional per a scripts del grup
     export PATH="$PATH:/home/greendevcorp/bin"
 
-    # Alias útiles para todos
+    # Alias útils per a tothom
     alias ll='ls -la'
     alias gs='git status'
     alias gp='git pull'
 
-    # Set language (Spanish)
+    # Configuració de llengua (espanyol)
     export LANG=es_ES.UTF-8
 
-    # Set timezone
+    # Configuració de zona horària
     export TZ=Europe/Madrid
 
-    # Set default editor
+    # Editor per defecte
     export EDITOR=nano
 
-    # Set default pager
+    # Pager per defecte
     export PAGER=less
 fi
 EOF
-    # Lectura para los miembros del grupo, escritura solo para el root
+    # Lectura per als membres del grup, escriptura només per root
     sudo chmod 640 /etc/profile.d/greendevcorp-shell-configuration.sh
 fi

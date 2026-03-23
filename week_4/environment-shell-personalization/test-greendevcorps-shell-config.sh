@@ -1,25 +1,23 @@
 #!/bin/bash
 
-# Y SI ALGUIEN CAMBIA LOS ALIAS DESPUES DE QUE ESTÉ ESTE SCRIPT INSTALADO? COMO LO SOLUCIONARIAMOS? PENSAR PARA TODOS LOS SCRIPTS CON LÓGICA ASÍ
-
-# Nombre del usuario de prueba (dentro del grupo)
+# Nom de l'usuari de prova (dins del grup)
 
 TEST_USER="nuevo_usuario"
 
-# Crear usuario solo si no existe
+# Crear usuari només si no existeix
 if ! id "$TEST_USER" >/dev/null 2>&1; then
     sudo useradd -m -G greendevcorp "$TEST_USER"
     echo "$TEST_USER:root" | sudo chpasswd
-    echo "[INFO] Usuario $TEST_USER creado y agregado al grupo greendevcorp"
+    echo "[INFO] Usuari $TEST_USER creat i afegit al grup greendevcorp"
 else
-    echo "[INFO] Usuario $TEST_USER ya existe"
+    echo "[INFO] Usuari $TEST_USER ja existeix"
 fi
 
-echo "[INFO] Probando entorno de usuario $TEST_USER..."
+echo "[INFO] Provant entorn d'usuari $TEST_USER..."
 
 TMP_SCRIPT=tmp
 
-# Ejecutar un shell de login para el usuario de prueba y verificar variables
+# Executar un shell de login per a l'usuari de prova i verificar variables
 cat << 'EOF' > $TMP_SCRIPT
 echo "[INFO] PATH: $PATH"
 echo "[INFO] LANG: $LANG"
@@ -27,18 +25,18 @@ echo "[INFO] TZ: $TZ"
 echo "[INFO] EDITOR: $EDITOR"
 echo "[INFO] PAGER: $PAGER"
 
-# Probar alias ll
+# Provar alias ll
 if alias ll >/dev/null 2>&1; then
-    echo "[INFO] Alias ll está presente"
+    echo "[INFO] Alias ll està present"
 else
-    echo "[ERROR] Alias ll NO está presente"
+    echo "[ERROR] Alias ll NO està present"
 fi
 
-# Probar alias git status
+# Provar alias git status
 if alias gs >/dev/null 2>&1; then
-    echo "[INFO] Alias gs está presente"
+    echo "[INFO] Alias gs està present"
 else
-    echo "[ERROR] Alias gs NO está presente"
+    echo "[ERROR] Alias gs NO està present"
 fi
 EOF
 
@@ -48,22 +46,22 @@ sudo -u "$TEST_USER" bash -l $TMP_SCRIPT
 
 # =========================================================
 
-# Nombre del usuario de prueba (fuera del grupo)
+# Nom de l'usuari de prova (fora del grup)
 
 TEST_USER="nuevo_usuario2"
 
-# Crear usuario solo si no existe
+# Crear usuari només si no existeix
 if ! id "$TEST_USER" >/dev/null 2>&1; then
     sudo useradd -m "$TEST_USER"
     echo "$TEST_USER:root" | sudo chpasswd
-    echo "[INFO] Usuario $TEST_USER creado"
+    echo "[INFO] Usuari $TEST_USER creat"
 else
-    echo "[INFO] Usuario $TEST_USER ya existe"
+    echo "[INFO] Usuari $TEST_USER ja existeix"
 fi
 
-echo "[INFO] Probando entorno de usuario $TEST_USER..."
+echo "[INFO] Provant entorn d'usuari $TEST_USER..."
 
-# Ejecutar un shell de login para el usuario de prueba y verificar variables
+# Executar un shell de login per a l'usuari de prova i verificar variables
 
 sudo -u "$TEST_USER" bash -l $TMP_SCRIPT
 
