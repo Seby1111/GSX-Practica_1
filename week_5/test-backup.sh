@@ -263,6 +263,7 @@ permisos() {
 
 echo "[1] Provant backups DAILY..."
 
+# Alternativa més segura a ordenar per timestamp, es queda amb la més recent i només la ruta d'aquesta última versió
 DAILY_BACKUP=$(find "$BACKUP_DIR/daily" -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
 
 if [ -n "$DAILY_BACKUP" ]; then

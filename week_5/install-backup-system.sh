@@ -16,17 +16,17 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Variables de fecha
-# DATE: usado para nombrar backups
-# DAY: determina si hacemos FULL (domingo=7) o incremental
-# DOM: Day Of Month para guardar el dia de mes en formato numérico
+# Variables de data
+# DATE: usat per anomenar backups
+# DAY: determina si fem FULL (diumenge=7) o incremental
+# DOM: Day Of Month per guardar el dia de mes en format numèric
 DATE=$(date +%F)
 DAY=$(date +%u)
 DOM=$(date +%d)
 
-# Directorios de backup
-# BACKUP_DIR: raíz de backups
-# LOG_FILE: archivo de logs
+# Directoris de backup
+# BACKUP_DIR: arrel de backups
+# LOG_FILE: fitxer de logs
 BACKUP_DIR="/var/backups"
 DAILY_DIR="$BACKUP_DIR/daily"
 WEEKLY_DIR="$BACKUP_DIR/weekly"
@@ -35,21 +35,21 @@ LOG_FILE="/var/log/backup.log"
 
 chmod 1700 $BACKUP_DIR
 
-# SOURCE - Datos críticos a respaldar
+# SOURCE - Dades crítiques a salvaguardar
 #
-# /etc -> Configuración del sistema (incluye nginx, usuarios, contraseñas, sudoers, limits.conf, etc.)
-#         (Excluimos lo que no nos interesa)
+# /etc -> Configuració del sistema (inclou nginx, usuaris, contrasenyes, sudoers, limits.conf, etc.)
+#         (Excloem el que no ens interessa)
 # 
-# /home/greendevcorp -> Directorio de trabajo del equipo:
-#     - scripts compartidos (bin)
-#     - trabajo colaborativo (shared)
-#     - logs de actividad (done.log)
+# /home/greendevcorp -> Directori de treball de l'equip:
+#     - scripts compartits (bin)
+#     - treball col·laboratiu (shared)
+#     - logs d'activitat (done.log)
 #
-# /opt -> Aplicaciones personalizadas y scripts de administración
+# /opt -> Aplicacions personalitzades i scripts d'administració
 #
-# /var/www -> Archivos web servidos por nginx
+# /var/www -> Fitxers web servits per nginx
 #
-# Incluye: datos + configuración + permisos
+# Inclou: dades + configuració + permisos
 SOURCE=(
 /etc
 /home/greendevcorp
@@ -57,11 +57,11 @@ SOURCE=(
 /var/www
 )
 
-# EXCLUDE: Excluir del backup
+# EXCLUDE: Excloure del backup
 #   /var/log: logs
-#   /tmp: ficheros temporales
-#   /proc, /sys, /dev: datos del kernel
-# Objetivo: ahorrar espacio y evitar errores en backup
+#   /tmp: fitxers temporals
+#   /proc, /sys, /dev: dades del kernel
+# Objectiu: estalviar espai i evitar errors en backup
 EXCLUDE=(
 --exclude=/var/log
 --exclude=/tmp
@@ -70,16 +70,16 @@ EXCLUDE=(
 --exclude=/dev
 )
 
-# Todo lo que se ejecute se guarda en LOG_FILE
+# Tot el que s'executa es guarda a LOG_FILE
 exec >> $LOG_FILE 2>&1
 
 echo "================================================================================"
-echo "==========================    START OF BACKUP   ================================"
+echo "==========================    INICI DEL BACKUP   ==============================="
 echo "================================================================================"
 
-echo "Backup iniciado: $DATE"
+echo "Backup iniciat: $DATE"
 
-# Crear directorios si no existen
+# Crear directoris si no existeixen
 
 if [ ! -d "$DAILY_DIR" ]; then
     mkdir -p "$DAILY_DIR"
@@ -94,28 +94,28 @@ if [ ! -d "$MONTHLY_DIR" ]; then
 fi
 
 # BACKUP PRINCIPAL:
-# Domingo -> Full backup (copia completa con tar)
-# Resto de días -> Incremental (rsync)
-# Primer dia de cada mes -> Full backup de nuevo
+# Diumenge -> Full backup (còpia completa amb tar)
+# Resta de dies -> Incremental (rsync)
+# Primer dia de cada mes -> Full backup de nou
 # rsync:
-#   copia solo cambios
+#   copia només canvis
 #   -aA preserva permisos
 
-# DAILY BACKUP (se guarda siempre)
+# DAILY BACKUP (es guarda sempre)
 echo "DAILY BACKUP"
 SNAPSHOT_DIR="$DAILY_DIR/$DATE"
 PREV_DIR="$DAILY_DIR/latest"
 
 mkdir -p "$SNAPSHOT_DIR"
 
-# Si existe backup previo, usarlo como referencia
+# Si existeix backup previ, usar-lo com a referència
 if [ -e "$PREV_DIR" ]; then
     LINK_DEST="--link-dest=$PREV_DIR"
 else
     LINK_DEST=""
 fi
 
-# Ejecutar rsync (con o sin link-dest) y con paths relativo (R)
+# Executar rsync (amb o sense link-dest) i amb paths relatius (R)
 if [ -n "$LINK_DEST" ]; then
     rsync -aA --delete -R "$LINK_DEST" "${EXCLUDE[@]}" "${SOURCE[@]}" "$SNAPSHOT_DIR/"
 else
@@ -124,33 +124,33 @@ fi
 
 ln -sfn "$SNAPSHOT_DIR" "$PREV_DIR"
 
-# WEEKLY BACKUP (domingo)
+# WEEKLY BACKUP (diumenge)
 if [ "$DAY" -eq 7 ]; then
     echo "WEEKLY BACKUP"
     tar --acls --xattrs -czf "$WEEKLY_DIR/backup-weekly-$DATE.tar.gz" "${SOURCE[@]}" 2>/dev/null
 fi
 
-# MONTHLY BACKUP (día 1 del mes)
+# MONTHLY BACKUP (dia 1 del mes)
 if [ "$DOM" -eq 01 ]; then
     echo "MONTHLY BACKUP"
     tar --acls --xattrs -czf "$MONTHLY_DIR/backup-monthly-$DATE.tar.gz" "${SOURCE[@]}" 2>/dev/null
 fi
 
-echo "Limpieza de backups antiguos..."
+echo "Neteja de backups antics..."
 
-# Retention policy nueva
-# Daily -> 7 días
-# Weekly -> 4 semanas (~28 días)
-# Monthly -> 12 meses (~365 días)
+# Política de retenció nova
+# Daily -> 7 dies
+# Weekly -> 4 setmanes (~28 dies)
+# Monthly -> 12 mesos (~365 dies)
 
-find "$DAILY_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} + # {} + : para agrupar el contenido y ejecutar la
-find "$WEEKLY_DIR" -type f -mtime +28 -delete                                 # instrucción sobre todos, aquí "*" no funciona porque
-find "$MONTHLY_DIR" -type f -mtime +365 -delete                               # no permitiría filtrar por antigüedad
+find "$DAILY_DIR" -mindepth 1 -maxdepth 1 -type d -mtime +7 -exec rm -rf {} + # {} +: per agrupar el contingut i executar la
+find "$WEEKLY_DIR" -type f -mtime +28 -delete                                 # instrucció sobre tots, aquí "*" no funciona perquè
+find "$MONTHLY_DIR" -type f -mtime +365 -delete                               # no permetria filtrar per antiguitat
 
-echo "Backup completado"
+echo "Backup completat"
 
 echo "================================================================================"
-echo "==========================     END OF BACKUP     ==============================="
+echo "==========================     FINAL DEL BACKUP     ============================"
 echo "================================================================================"
 echo ""
 echo ""
@@ -175,37 +175,37 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# Variables (ajusta según tu entorno)
+# Variables (ajusta segons el teu entorn)
 BACKUP_DIR="/var/backups"
 TEST_DIR="/tmp/restore-test"
 
 LOG_FILE="/var/log/backup-test.log"
 
-# Configuración de alertas
+# Configuració d'alertes
 ALERT_EMAIL="alexandru-ciprian.radu@estudiants.urv.cat"
 HOSTNAME=$(hostname)
 
-# Control de errores
+# Control d'errors
 ERRORS=0
 
-# Redirigir salida a log
+# Redirigir sortida al log
 exec >> "$LOG_FILE" 2>&1
 
 echo "================================================================================"
-echo "========================  START OF BACKUP TEST  ================================"
+echo "========================  INICI DEL TEST DE BACKUP  ============================"
 echo "================================================================================"
 
 echo ""
-echo "Start at: $(date)"
+echo "Inici a: $(date)"
 
-# Limpiar entorno
+# Netejar entorn
 rm -rf "$TEST_DIR"
 mkdir -p "$TEST_DIR"
 
-# Función de alerta
+# Funció d'alerta
 send_alert () {
     local MSG=$1
-    echo "[ALERT] $MSG"
+    echo "[ALERTA] $MSG"
     let ERRORS=$ERRORS+1
 }
 
@@ -215,195 +215,195 @@ test_tar_backup () {
 
     echo "[TEST] $NAME -> $FILE"
 
-    # Comprobar que archivo existe
+    # Comprovar que el fitxer existeix
     if [ ! -f "$FILE" ]; then
-        echo "[ERROR] Missing $NAME backup"
-        send_alert "Missing $NAME backup on $HOSTNAME"
+        echo "[ERROR] Falta el backup $NAME"
+        send_alert "Falta backup $NAME a $HOSTNAME"
     fi
 
-    # Verificar integridad
+    # Verificar integritat
     if tar --acls --xattrs -tzf "$FILE" > /dev/null 2>&1; then
-        echo "[OK] Archive integrity in order"
+        echo "[OK] Integritat de l'arxiu correcta"
     else
-        echo "[ERROR] Corrupted archive"
-        send_alert "Corrupted $NAME backup on $HOSTNAME"
+        echo "[ERROR] Arxiu corrupte"
+        send_alert "Backup $NAME corrupte a $HOSTNAME"
     fi
 
-    # Restaurar en subdir (carpeta temporal para test)
+    # Restaurar en subdirectori (carpeta temporal per test)
     local DEST="$TEST_DIR/$NAME"
     mkdir -p "$DEST"
 
     tar --acls --xattrs -xzf "$FILE" -C "$DEST"
 
-    # Verificación básica
+    # Verificació bàsica
     if [ -d "$DEST/etc" ] && [ -d "$DEST/home" ]; then
-        echo "[OK] Structure in order for $NAME"
+        echo "[OK] Estructura correcta per $NAME"
     else
-        echo "[ERROR] Missing critical dirs in $NAME"
-        send_alert "Structure failure in $NAME backup"
+        echo "[ERROR] Falten directoris crítics a $NAME"
+        send_alert "Error d'estructura en backup $NAME"
     fi
 
-    # Verificación de contenido real (mínimamente)
+    # Verificació de contingut real (mínimament)
     if [ -f "$DEST/etc/passwd" ]; then
-        echo "[OK] Critical file exists (/etc/passwd)"
+        echo "[OK] Fitxer crític existent (/etc/passwd)"
     else
-        echo "[ERROR] Missing /etc/passwd"
-        send_alert "Missing passwd file in $NAME backup"
+        echo "[ERROR] Falta /etc/passwd"
+        send_alert "Falta passwd en backup $NAME"
     fi
 
-    # Verificación estructura greendevcorp
+    # Verificació estructura greendevcorp
     GDC_BASE="$DEST/home/greendevcorp"
 
     if [ -d "$GDC_BASE" ]; then
-        echo "[OK] greendevcorp directory exists"
+        echo "[OK] Directori greendevcorp existeix"
     else
-        echo "[ERROR] Missing /home/greendevcorp"
-        send_alert "Missing greendevcorp directory"
+        echo "[ERROR] Falta /home/greendevcorp"
+        send_alert "Falta directori greendevcorp"
     fi
 
-    # Verificar subdirectorios
+    # Verificar subdirectoris
     if [ -d "$GDC_BASE/bin" ] && [ -d "$GDC_BASE/shared" ]; then
-        echo "[OK] greendevcorp structure correct"
+        echo "[OK] Estructura de greendevcorp correcta"
     else
-        echo "[ERROR] Missing bin or shared directory"
-        send_alert "Structure error in greendevcorp"
+        echo "[ERROR] Falten bin o shared"
+        send_alert "Error d'estructura en greendevcorp"
     fi
 
-    # Verificar archivo done.log
+    # Verificar fitxer done.log
     if [ -f "$GDC_BASE/done.log" ]; then
-        echo "[OK] done.log exists"
+        echo "[OK] done.log existeix"
     else
-        echo "[ERROR] Missing done.log"
-        send_alert "Missing done.log"
+        echo "[ERROR] Falta done.log"
+        send_alert "Falta done.log"
     fi
 
-    # Verificación de permisos bin (750)
+    # Verificació de permisos bin (750)
     PERM_BIN=$(permisos "$GDC_BASE/bin" 2>/dev/null || echo "000")
     if [ "$PERM_BIN" != "750" ]; then
-        echo "[ERROR] Wrong permissions on bin ($PERM_BIN)"
-        send_alert "Bad permissions on bin"
+        echo "[ERROR] Permisos incorrectes en bin ($PERM_BIN)"
+        send_alert "Permisos incorrectes en bin"
     else
-        echo "[OK] bin permissions correct"
+        echo "[OK] Permisos de bin correctes"
     fi
 
-    # Verificación de permisos shared (3770)
+    # Verificació de permisos shared (3770)
     PERM_SHARED=$(stat -c %a "$GDC_BASE/shared" 2>/dev/null || echo "000")
     if [ "$PERM_SHARED" != "3770" ]; then
-        echo "[ERROR] Wrong permissions on shared ($PERM_SHARED)"
-        send_alert "Bad permissions on shared"
+        echo "[ERROR] Permisos incorrectes en shared ($PERM_SHARED)"
+        send_alert "Permisos incorrectes en shared"
     else
-        echo "[OK] shared permissions correct"
+        echo "[OK] Permisos de shared correctes"
     fi
 
-    # Verificación done.log (644)
+    # Verificació done.log (644)
     PERM_LOG=$(permisos "$GDC_BASE/done.log" 2>/dev/null || echo "000")
     if [ "$PERM_LOG" != "644" ]; then
-        echo "[ERROR] Wrong permissions on done.log ($PERM_LOG)"
-        send_alert "Bad permissions on done.log"
+        echo "[ERROR] Permisos incorrectes en done.log ($PERM_LOG)"
+        send_alert "Permisos incorrectes en done.log"
     else
-        echo "[OK] done.log permissions correct"
+        echo "[OK] Permisos de done.log correctes"
     fi
 }
 
-# Lo mismo que la función anterior pero adaptado para los snapshots incrementales de DAILY
+# El mateix que la funció anterior però adaptat per als snapshots incrementals de DAILY
 test_snapshot_backup () {
     local DIR=$1
     local NAME=$2
 
     echo "[TEST] $NAME -> $DIR"
 
-    # Comprobar que el directorio existe
+    # Comprovar que el directori existeix
     if [ ! -d "$DIR" ]; then
-        echo "[ERROR] Missing $NAME snapshot"
-        send_alert "Missing $NAME snapshot on $HOSTNAME"
+        echo "[ERROR] Falta snapshot $NAME"
+        send_alert "Falta snapshot $NAME a $HOSTNAME"
         return
     fi
 
-    # Verificación básica de estructura
+    # Verificació bàsica d'estructura
     if [ -d "$DIR/etc" ] && [ -d "$DIR/home" ]; then
-        echo "[OK] Structure in order for $NAME"
+        echo "[OK] Estructura correcta per $NAME"
     else
-        echo "[ERROR] Missing critical dirs in $NAME"
-        send_alert "Structure failure in $NAME snapshot"
+        echo "[ERROR] Falten directoris crítics a $NAME"
+        send_alert "Error d'estructura en snapshot $NAME"
     fi
 
-    # Verificación de contenido real
+    # Verificació de contingut real
     if [ -f "$DIR/etc/passwd" ]; then
-        echo "[OK] Critical file exists (/etc/passwd)"
+        echo "[OK] Fitxer crític existent (/etc/passwd)"
     else
-        echo "[ERROR] Missing /etc/passwd"
-        send_alert "Missing passwd file in $NAME snapshot"
+        echo "[ERROR] Falta /etc/passwd"
+        send_alert "Falta passwd en snapshot $NAME"
     fi
 
-    # Verificación estructura greendevcorp
+    # Verificació estructura greendevcorp
     GDC_BASE="$DIR/home/greendevcorp"
 
     if [ -d "$GDC_BASE" ]; then
-        echo "[OK] greendevcorp directory exists"
+        echo "[OK] Directori greendevcorp existeix"
     else
-        echo "[ERROR] Missing /home/greendevcorp"
-        send_alert "Missing greendevcorp directory"
+        echo "[ERROR] Falta /home/greendevcorp"
+        send_alert "Falta directori greendevcorp"
         return
     fi
 
-    # Verificar subdirectorios
+    # Verificar subdirectoris
     if [ -d "$GDC_BASE/bin" ] && [ -d "$GDC_BASE/shared" ]; then
-        echo "[OK] greendevcorp structure correct"
+        echo "[OK] Estructura de greendevcorp correcta"
     else
-        echo "[ERROR] Missing bin or shared directory"
-        send_alert "Structure error in greendevcorp"
+        echo "[ERROR] Falten bin o shared"
+        send_alert "Error d'estructura en greendevcorp"
     fi
 
-    # Verificar archivo done.log
+    # Verificar fitxer done.log
     if [ -f "$GDC_BASE/done.log" ]; then
-        echo "[OK] done.log exists"
+        echo "[OK] done.log existeix"
     else
-        echo "[ERROR] Missing done.log"
-        send_alert "Missing done.log"
+        echo "[ERROR] Falta done.log"
+        send_alert "Falta done.log"
     fi
 
-    # Verificación de permisos bin (750) en formato octal (%a)
+    # Verificació de permisos bin (750) en format octal (%a)
     PERM_BIN=$(permisos "$GDC_BASE/bin" 2>/dev/null || echo "000")
     if [ "$PERM_BIN" != "750" ]; then
-        echo "[ERROR] Wrong permissions on bin ($PERM_BIN)"
-        send_alert "Bad permissions on bin"
+        echo "[ERROR] Permisos incorrectes en bin ($PERM_BIN)"
+        send_alert "Permisos incorrectes en bin"
     else
-        echo "[OK] bin permissions correct"
+        echo "[OK] Permisos de bin correctes"
     fi
 
-    # Verificación de permisos shared (3770)
+    # Verificació de permisos shared (3770)
     PERM_SHARED=$(stat -c %a "$GDC_BASE/shared" 2>/dev/null || echo "000")
     if [ "$PERM_SHARED" != "3770" ]; then
-        echo "[ERROR] Wrong permissions on shared ($PERM_SHARED)"
-        send_alert "Bad permissions on shared"
+        echo "[ERROR] Permisos incorrectes en shared ($PERM_SHARED)"
+        send_alert "Permisos incorrectes en shared"
     else
-        echo "[OK] shared permissions correct"
+        echo "[OK] Permisos de shared correctes"
     fi
 
-    # Verificación done.log (644)
+    # Verificació done.log (644)
     PERM_LOG=$(permisos "$GDC_BASE/done.log" 2>/dev/null || echo "000")
     if [ "$PERM_LOG" != "644" ]; then
-        echo "[ERROR] Wrong permissions on done.log ($PERM_LOG)"
-        send_alert "Bad permissions on done.log"
+        echo "[ERROR] Permisos incorrectes en done.log ($PERM_LOG)"
+        send_alert "Permisos incorrectes en done.log"
     else
-        echo "[OK] done.log permissions correct"
+        echo "[OK] Permisos de done.log correctes"
     fi
 
-    # Verificación avanzada: comparación real contra sistema original (checksum)
-    echo "[CHECK] Verifying snapshot consistency with source (checksum diff)..."
+    # Verificació avançada: comparació real contra sistema original (checksum)
+    echo "[CHECK] Verificant consistència del snapshot amb la font (checksum diff)..."
 
     if rsync -avnc --delete /etc/ "$DIR/etc/" > /dev/null 2>&1; then
-        echo "[OK] /etc matches source (checksum)"
+        echo "[OK] /etc coincideix amb la font (checksum)"
     else
-        echo "[ERROR] Differences found in /etc"
-        send_alert "Checksum mismatch in /etc for $NAME snapshot"
+        echo "[ERROR] Diferències trobades a /etc"
+        send_alert "Desajust de checksum a /etc per $NAME"
     fi
 
     if rsync -avnc --delete /home/greendevcorp/ "$DIR/home/greendevcorp/" > /dev/null 2>&1; then
-        echo "[OK] /home/greendevcorp matches source (checksum)"
+        echo "[OK] /home/greendevcorp coincideix amb la font (checksum)"
     else
-        echo "[ERROR] Differences found in /home/greendevcorp"
-        send_alert "Checksum mismatch in greendevcorp for $NAME snapshot"
+        echo "[ERROR] Diferències trobades a /home/greendevcorp"
+        send_alert "Desajust de checksum a greendevcorp per $NAME"
     fi
 }
 
@@ -430,59 +430,57 @@ permisos() {
     echo "${ur}${gr}${or}"
 }
 
-echo "[1] Testing DAILY backups..."
+echo "[1] Provant backups DAILY..."
 
-# Alternativa más segura a ordena por timestamp, se queda con la más reciente y solo la ruta de esa última versión
+# Alternativa més segura a ordenar per timestamp, es queda amb la més recent i només la ruta d'aquesta última versió
 DAILY_BACKUP=$(find "$BACKUP_DIR/daily" -mindepth 1 -maxdepth 1 -type d -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
 
 if [ -n "$DAILY_BACKUP" ]; then
     test_snapshot_backup "$DAILY_BACKUP" "daily"
 else
-    echo "[ERROR] No daily backups found"
-    send_alert "No daily backups found"
+    echo "[ERROR] No s'han trobat backups daily"
+    send_alert "No s'han trobat backups daily"
 fi
 
-echo "[2] Testing WEEKLY backups..."
+echo "[2] Provant backups WEEKLY..."
 
 WEEKLY_BACKUPS=$(find "$BACKUP_DIR/weekly" -type f -name "backup-weekly-*.tar.gz" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
 
 if [ -n "$WEEKLY_BACKUPS" ]; then
     test_tar_backup "$WEEKLY_BACKUPS" "weekly"
 else
-    echo "[ERROR] No weekly backups found"
-    send_alert "No weekly backups found"
+    echo "[ERROR] No s'han trobat backups weekly"
+    send_alert "No s'han trobat backups weekly"
 fi
 
-echo "[3] Testing MONTHLY backups..."
+echo "[3] Provant backups MONTHLY..."
 
 MONTHLY_BACKUPS=$(find "$BACKUP_DIR/monthly" -type f -name "backup-monthly-*.tar.gz" -printf "%T@ %p\n" 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)
 
 if [ -n "$MONTHLY_BACKUPS" ]; then
     test_tar_backup "$MONTHLY_BACKUPS" "monthly"
 else
-    echo "[ERROR] No monthly backups found"
-    send_alert "No monthly backups found"
+    echo "[ERROR] No s'han trobat backups monthly"
+    send_alert "No s'han trobat backups monthly"
 fi
 
-# RTOs de ambos casos para dar una idea del tiempo que se puede esperar
-
-echo "[4] RTO simulation test..."
+echo "[4] Test RTO..."
 
 if [ -n "$DAILY_BACKUP" ]; then
-    echo "Simulating DAILY restore timing..."
+    echo "Simulant restauració DAILY..."
     START_TIME=$(date +%s)
 
-    # Restauración del snapshot (copia completa)
+    # Restauració del snapshot (còpia completa)
     rsync -a "$DAILY_BACKUP/" "$TEST_DIR/daily_restore/"
 
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
 
-    echo "[OK] DAILY restore simulation completed in ${DURATION}s"
+    echo "[OK] Restauració DAILY completada en ${DURATION}s"
 fi
 
 if [ -n "$WEEKLY_BACKUPS" ]; then
-    echo "Simulating WEEKLY restore timing..."
+    echo "Simulant restauració WEEKLY..."
     START_TIME=$(date +%s)
 
     time tar --acls --xattrs -xzf "$WEEKLY_BACKUPS" -C "$TEST_DIR"
@@ -490,29 +488,27 @@ if [ -n "$WEEKLY_BACKUPS" ]; then
     END_TIME=$(date +%s)
     DURATION=$((END_TIME - START_TIME))
 
-    echo "[OK] WEEKLY restore simulation completed in ${DURATION}s"
+    echo "[OK] Restauració WEEKLY completada en ${DURATION}s"
 fi
 
-# Limpieza del directorio de testing (se comprueba de todos modos al principio de cada test)
-
-echo "[5] Cleaning test environment..."
+echo "[5] Netejant entorn de test..."
 rm -rf "$TEST_DIR"
 
-echo "Total errors detected: $ERRORS"
+echo "Errors totals detectats: $ERRORS"
 
 if [ "$ERRORS" -gt 0 ]; then
-    echo "[FINAL STATUS] FAIL"
+    echo "[ESTAT FINAL] FALLADA"
 
-    # Envío por correo de alerta
+    # Enviament per correu d'alerta
     if command -v mail >/dev/null 2>&1; then
-        echo "Backup test FAILED on $HOSTNAME with $ERRORS errors" | mail -s "Backup Alert" "$ALERT_EMAIL"
+        echo "El test de backup HA FALLAT a $HOSTNAME amb $ERRORS errors" | mail -s "Alerta Backup" "$ALERT_EMAIL"
     fi
 else
-    echo "[FINAL STATUS] SUCCESS"
+    echo "[ESTAT FINAL] ÈXIT"
 fi
 
 echo "================================================================================"
-echo "========================   END OF BACKUP TEST   ================================"
+echo "========================   FINAL DEL TEST DE BACKUP   =========================="
 echo "================================================================================"
 echo ""
 echo ""
@@ -528,7 +524,7 @@ if [ ! -f "$arxiu" ]; then
 
     sudo tee "$arxiu" > /dev/null << 'EOF'
 [Unit]
-Description=Backup Script
+Description=Script de Backup
 
 [Service]
 Type=oneshot
@@ -543,7 +539,7 @@ if [ ! -f "$arxiu" ]; then
 
     sudo tee "$arxiu" > /dev/null << 'EOF'
 [Unit]
-Description=Run backup daily at 2 AM
+Description=Executar Backup diàriament a les 2 de la matinada (AM)
 
 [Timer]
 OnCalendar=*-*-* 02:00:00

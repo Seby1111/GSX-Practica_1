@@ -30,12 +30,12 @@ chmod 1700 $BACKUP_DIR
 # /etc -> Configuració del sistema (inclou nginx, usuaris, contrasenyes, sudoers, limits.conf, etc.)
 #         (Excloem el que no ens interessa)
 # 
-# /home/greendevcorp -> Directori de treball de l’equip:
+# /home/greendevcorp -> Directori de treball de l'equip:
 #     - scripts compartits (bin)
 #     - treball col·laboratiu (shared)
-#     - logs d’activitat (done.log)
+#     - logs d'activitat (done.log)
 #
-# /opt -> Aplicacions personalitzades i scripts d’administració
+# /opt -> Aplicacions personalitzades i scripts d'administració
 #
 # /var/www -> Fitxers web servits per nginx
 #
@@ -60,7 +60,7 @@ EXCLUDE=(
 --exclude=/dev
 )
 
-# Tot el que s’executa es guarda a LOG_FILE
+# Tot el que s'executa es guarda a LOG_FILE
 exec >> $LOG_FILE 2>&1
 
 echo "================================================================================"
