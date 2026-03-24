@@ -617,11 +617,11 @@ Instruccions d'ús:
 
 2. Executar l'script amb privilegis d'administrador: sudo ./logrotate-install.sh
 
-> Nota: Per verificar el funcionament de la configuració, es pot forçar una execució manual de logrotate amb la comanda logrotate -f /etc/logrotate.conf. També es recomana revisar els logs de logrotate per validar la correcta execució.
+> Nota: Per verificar el funcionament de la configuració, es pot forçar una execució manual de logrotate amb la comanda logrotate -f /etc/logrotate.conf. També es recomana revisar els logs de logrotate per validar la correcta execució. També es pot usar logs-verify.sh i comprovar les dates per a testejar si la rotació funciona.
 
 ### logs-verify.sh
 
-L'script logs-verify.sh té com a finalitat verificar que un servei gestionat per systemd continua generant logs recentment i detectar la presència d'errors dins d'un interval de temps determinat. Proporciona una validació ràpida de l'activitat i salut del servei basada en els seus registres.
+L'script logs-verify.sh té com a finalitat verificar que un servei gestionat per systemd continua generant logs recentment i detectar la presència d'errors dins d'un interval de temps determinat. Proporciona una validació ràpida de l'activitat i salut del servei basada en els seus registres. També pot servir per verificar la rotació de logs.
 
 Funcionalitats Implementades:
 
@@ -1517,7 +1517,7 @@ Instruccions d'ús:
 
    sudo ./test-greendevcorps-shell-config.sh
 
-> Nota: L'script crea usuaris temporals per a les proves i els elimina al final de l'execució. Les sortides mostraran informació sobre variables d'entorn i la disponibilitat dels àlies configurats. És necessari que s'hague executat prèviament el script user-group-structure.sh i shell-configuration-install per al correcte funcionament d'aquest test de proba.
+> Nota: L'script crea usuaris temporals per a les proves i els elimina al final de l'execució. Les sortides mostraran informació sobre variables d'entorn i la disponibilitat dels àlies configurats. És necessari que s'hague executat prèviament el script user-group-structure.sh i shell-configuration-install.sh per al correcte funcionament d'aquest test de proba.
 
 ### script-test-access-control.sh
 
@@ -1709,7 +1709,7 @@ Instruccions d'ús:
 
    sudo ./test-access-control.sh
 
-> Nota: L'script depèn de l'existència de l'usuari dev1 creat prèviament així com l'existencia del grup greendevcorp. En cas que no existeixi, cal executar l'script user-group-structure.sh abans de la seva execució. Adicionalment depén de l'existencia del sistema de directoris i permisos que crea l'script directory-structure.sh, en cas de que no existeixi, cap executar-lo.
+> Nota: L'script depèn de l'existència de l'usuari dev1 creat prèviament així com l'existencia del grup greendevcorp. En cas que no existeixi, cal executar l'script user-group-structure.sh abans de la seva execució. Adicionalment depén de l'existencia del sistema de directoris i permisos que crea l'script directory-structure.sh, en cas de que no existeixi, cal executar-lo.
 
 
 ### user-group-structure.sh
@@ -2485,3 +2485,69 @@ Instruccions d'ús:
 2. Executa amb privilegis de root: sudo ./storage-setup.sh
 
 3. Segueix els indicadors de pantalla per seleccionar el disc detectat per la VM.
+
+### full-deployment.sh
+
+L'script full-deployment.sh té com a finalitat automatitzar el desplegament complet de tots els components del sistema desenvolupats al llarg de les diferents setmanes del projecte. Executa de forma seqüencial tots els scripts d'instal·lació i configuració, assegurant una posada en marxa homogènia i sense intervenció manual.
+
+Funcionalitats Implementades:
+
++ Validació de l'Entorn d'Execució:
+
+  - Execució com a root: L'script comprova que es disposa de privilegis d'administrador abans de continuar, garantint que totes les configuracions del sistema es puguin aplicar correctament.
+
++ Orquestració del Desplegament:
+
+  - Execució seqüencial: Llança múltiples scripts en un ordre determinat, respectant dependències implícites entre components.
+
+  - Navegació per estructura de projecte: Utilitza canvis de directori (cd) per accedir a cada mòdul abans d'executar els scripts corresponents.
+
++ Configuració del Sistema de Logs (week_2/journald):
+
+  - Instal·lació de consultes journald: Executa journald-install-querys.sh per habilitar eines de consulta de logs.
+
+  - Configuració del sistema journald: Executa journald-system-conf.sh per ajustar paràmetres del sistema de logs.
+
+  - Integració amb logrotate: Executa logrotate-install.sh per gestionar la rotació i persistència dels logs.
+
++ Desplegament de Serveis Web (week_2/nginx):
+
+  - Instal·lació de configuracions i scripts relacionats amb Nginx mitjançant install-nginx-scripts.sh.
+
++ Control de Recursos del Sistema (week_3/memory-limiting):
+
+  - Limitació de CPU: Executa cpu-limits-install.sh per crear un servei cpu-limits per testejar restriccions de consum de CPU.
+
+  - Configuració de límits del sistema: Executa limits-conf.sh per definir polítiques per a nginx, a nivell d'usuari i a nivells globals de recursos.
+
++ Configuració d'Usuaris i Sistema de Fitxers (week_4):
+
+  - Estructura d'usuaris i grups: Executa user-group-structure.sh per definir rols i permisos.
+
+  - Estructura de directoris: Executa directory-structure.sh per establir l'organització del sistema de fitxers.
+
++ Personalització de l'Entorn Shell:
+
+  - Configuració de l'entorn d'usuari: Executa shell-configuration-install.sh per configurar la shell dels integrants del grup greendevcorp. L'script té dependencies amb user-group-structure.sh per el seu funcionament correcte.
+
++ Desplegament del Sistema de Backups (week_5):
+
+  - Instal·lació completa del sistema de còpies de seguretat mitjançant install-backup-system.sh.
+
++ Execució amb privilegis elevats:
+
+  - Tots els scripts són executats amb sudo, assegurant permisos adequats per modificar el sistema.
+
+Instruccions d'ús:
+
+1. Assegureu-vos que l'estructura de directoris del projecte es manté intacta i que tots els scripts referenciats existeixen.
+
+2. Donar permisos d'execució:
+
+   chmod +x full-deployment.sh
+
+3. Executar l'script amb privilegis d'administrador:
+
+   sudo ./full-deployment.sh
+
+> Nota: Aquest script està pensat per a un deployment ràpid amb scripts individuals prèviament testejats i amb controls d'errors propis. L'script full-deployment.sh com a tal no implementa control d'errors entre execucions. Si algun dels scripts fallen, el procés continuarà amb el següent. Es recomana revisar la sortida de cada script per validar que el desplegament s'ha completat correctament.
