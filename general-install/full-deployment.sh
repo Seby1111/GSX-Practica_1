@@ -10,12 +10,6 @@ cd ../week_1
 
 chmod +x *.sh
 
-sudo ./basig-config-root.sh
-
-sudo ./basic-config-user.sh
-
-sudo ./directory-structure.sh
-
 sudo ./setup-verification.sh
 
 cd ../week_2

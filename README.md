@@ -231,7 +231,7 @@ Instruccions d'ús:
 
 ### system-backup.sh
 
-L’script **system-backup.sh** és l’eina encarregada d’executar la política de seguretat de dades de la startup. La seva funció és consolidar els fitxers crítics de configuració i scripts en un únic fitxer comprimit i protegir-lo mitjançant xifratge d'alt nivell.
+L'script **system-backup.sh** és l'eina encarregada d'executar la política de seguretat de dades de la startup. La seva funció és consolidar els fitxers crítics de configuració i scripts en un únic fitxer comprimit i protegir-lo mitjançant xifratge d'alt nivell.
 
 Funcionalitats Implementades:
 
@@ -1013,7 +1013,7 @@ Instruccions d'ús:
 
 ### limits-conf.sh
 
-L'script limits-conf.sh té com a finalitat aplicar una configuració de límits de recursos a nivell de servei (nginx), a nivell global del sistema i a nivell d’usuaris mitjançant systemd i el sistema de límits de Linux. Permet centralitzar la gestió de CPU, memòria, processos i descriptors de fitxers per millorar el control i la previsibilitat dels recursos. Està disenyat al voltant de les especificacions del sistema especulades per l'enunciat, que son les següents: 2GB RAM, 1 CPU, 20GB disk (assignat dinàmicament).
+L'script limits-conf.sh té com a finalitat aplicar una configuració de límits de recursos a nivell de servei (nginx), a nivell global del sistema i a nivell d'usuaris mitjançant systemd i el sistema de límits de Linux. Permet centralitzar la gestió de CPU, memòria, processos i descriptors de fitxers per millorar el control i la previsibilitat dels recursos. Està disenyat al voltant de les especificacions del sistema especulades per l'enunciat, que son les següents: 2GB RAM, 1 CPU, 20GB disk (assignat dinàmicament).
 
 Funcionalitats Implementades:
 
@@ -1021,9 +1021,9 @@ Funcionalitats Implementades:
 
   - Override de systemd: Crea el directori /etc/systemd/system/nginx.service.d i defineix un fitxer limits.conf amb paràmetres específics per al servei nginx.
 
-  - Control de CPU: CPUQuota=50% limita l’ús de CPU al 50% d’un core (servei principal del sistema).
+  - Control de CPU: CPUQuota=50% limita l'ús de CPU al 50% d'un core (servei principal del sistema).
 
-  - Afinitat de CPU: CPUAffinity=0 fixa l’execució del servei al core 0 (únic core disponible).
+  - Afinitat de CPU: CPUAffinity=0 fixa l'execució del servei al core 0 (únic core disponible).
 
   + Gestió de memòria:
 
@@ -1069,9 +1069,9 @@ Funcionalitats Implementades:
 
     - nproc: límits de processos (soft i hard).
 
-  - Gestió d'entrades duplicades: Comprova si cada línia ja existeix abans d’afegir-la.
+  - Gestió d'entrades duplicades: Comprova si cada línia ja existeix abans d'afegir-la.
 
-+ Funció d’Actualització de Configuració:
++ Funció d'Actualització de Configuració:
 
   + Funció reutilitzable update_conf:
 
@@ -1083,7 +1083,7 @@ Funcionalitats Implementades:
 
 + Informació Operativa:
 
-  - Missatges informatius: Indica l’estat de cada modificació i validació.
+  - Missatges informatius: Indica l'estat de cada modificació i validació.
 
   - Recomanació final: Informa que cal reiniciar la sessió perquè els canvis a limits.conf tinguin efecte.
 
@@ -1093,11 +1093,11 @@ Instruccions d'ús:
 
 2. Executar l'script amb privilegis d'administrador: sudo ./limits-conf.sh
 
-> Nota: Aquest script modifica configuracions crítiques del sistema i del servei nginx. Es recomana revisar els fitxers /etc/systemd/system/nginx.service.d/limits.conf, /etc/systemd/system.conf i /etc/security/limits.conf després de l’execució, així com reiniciar la sessió per aplicar completament els canvis de límits d’usuari.
+> Nota: Aquest script modifica configuracions crítiques del sistema i del servei nginx. Es recomana revisar els fitxers /etc/systemd/system/nginx.service.d/limits.conf, /etc/systemd/system.conf i /etc/security/limits.conf després de l'execució, així com reiniciar la sessió per aplicar completament els canvis de límits d'usuari.
 
 ### limit-verification.sh
 
-L'script limit-verification.sh té com a finalitat verificar l’aplicació correcta dels límits de recursos a nivell de systemd, PAM (limits.conf) i sistema de cgroups per a diversos serveis, així com realitzar proves bàsiques de càrrega per validar el comportament dels límits configurats.
+L'script limit-verification.sh té com a finalitat verificar l'aplicació correcta dels límits de recursos a nivell de systemd, PAM (limits.conf) i sistema de cgroups per a diversos serveis, així com realitzar proves bàsiques de càrrega per validar el comportament dels límits configurats.
 
 Funcionalitats Implementades:
 
@@ -1107,7 +1107,7 @@ Funcionalitats Implementades:
 
   - Estat del servei: Utilitza systemctl show per obtenir el PID principal (MainPID) de cada servei.
 
-  - Validació d’execució: Determina si el servei està actiu o no en funció del PID.
+  - Validació d'execució: Determina si el servei està actiu o no en funció del PID.
 
   - Inspecció de cgroups: Llegeix /proc/<PID>/cgroup per mostrar la jerarquia de control de recursos associada al procés.
 
@@ -1129,7 +1129,7 @@ Funcionalitats Implementades:
 
   - Execució controlada: Llença processos yes en segon pla per generar càrrega temporal de CPU.
 
-  - Mesura d’ús: Utilitza ps per obtenir el percentatge d’ús de CPU durant una finestra de 3 segons.
+  - Mesura d'ús: Utilitza ps per obtenir el percentatge d'ús de CPU durant una finestra de 3 segons.
 
   - Finalització segura: Termina els processos de prova després de la mesura.
 
@@ -1137,7 +1137,7 @@ Funcionalitats Implementades:
 
 + Informació i Sortida:
 
-  - Missatges estructurats: Organitza la sortida en seccions clares per facilitar l’anàlisi.
+  - Missatges estructurats: Organitza la sortida en seccions clares per facilitar l'anàlisi.
 
   - Informació consolidada: Mostra estat, PID, cgroups, límits i resultats de proves de càrrega.
 
@@ -1367,7 +1367,7 @@ Funcionalitats Implementades:
 
   - ll: Alias per ls -la per mostrar llistats detallats amb fitxers ocults.
 
-  - gs: Alias per git status per consultar l’estat del repositori.
+  - gs: Alias per git status per consultar l'estat del repositori.
 
   - gp: Alias per git pull per actualitzar el repositori local.
 
@@ -1904,14 +1904,14 @@ Escollim implementar tant el backup incremental com el full en un únic script, 
 S'escogeix aquestes dades per ser les més crucials per al funcionament d'aquest startup, així com les dades del grup creat que utilitzaran els programadors.
 
 + /etc*: conté la configuració del sistema (usuaris, permisos, serveis com nginx, configuracions de sudo, limits, etc.).
-+ /home/greendevcorp*: directori de treball de l’equip, incloent:
++ /home/greendevcorp*: directori de treball de l'equip, incloent:
   - scripts compartits (bin)
   - espais de col·laboració (shared)
-  - logs d’activitat (done.log)
-+ /opt*: aplicacions personalitzades i scripts d’administració.
+  - logs d'activitat (done.log)
++ /opt*: aplicacions personalitzades i scripts d'administració.
 + /var/www*: contingut web servit pel servidor (nginx o similar).
 
-A més, s’exclouen explícitament directoris no rellevants per al backup:
+A més, s'exclouen explícitament directoris no rellevants per al backup:
 
 + /var/log (logs del sistema)
 + /tmp (fitxers temporals)
@@ -1923,7 +1923,7 @@ Pel que fa a la retention policy:
 + **Backups setmanals (weekly)**: es conserven durant aproximadament 4 setmanes (28 dies).
 + **Backups mensuals (monthly)**: es conserven durant 12 mesos (365 dies).
 
-La neteja s’aplica automàticament eliminant:
+La neteja s'aplica automàticament eliminant:
 
 + directoris diaris amb més de 7 dies
 + fitxers setmanals amb més de 28 dies
@@ -1936,7 +1936,7 @@ La estratègia implementada és una combinació de:
 + **Backups incrementals (diaris)**:
 
   - Es realitzen cada dia.
-  - Utilitzen `rsync` amb l’opció `--link-dest`, que permet crear snapshots eficients reutilitzant dades no modificades (hard links).
+  - Utilitzen `rsync` amb l'opció `--link-dest`, que permet crear snapshots eficients reutilitzant dades no modificades (hard links).
   - Es genera una estructura de snapshots per cada data.
 
 + **Backups complets (setmanals i mensuals)**:
@@ -1950,13 +1950,13 @@ Freqüència:
 + Backup setmanal → cada diumenge (full)
 + Backup mensual → dia 1 de cada mes (full)
 
-### Justificat: Per què aquesta estratègia s’ajusta a les necessitats de la startup?
+### Justificat: Per què aquesta estratègia s'ajusta a les necessitats de la startup?
 
 Aquesta estratègia és adequada per a una startup perquè equilibra eficiència i capacitat de recuperació:
 
-+ **Eficiència d’espai**:
++ **Eficiència d'espai**:
 
-  - L’ús de backups incrementals amb `rsync` i `--link-dest` evita duplicar dades, reduint significativament l’espai necessari.
+  - L'ús de backups incrementals amb `rsync` i `--link-dest` evita duplicar dades, reduint significativament l'espai necessari.
   - Només es guarden canvis entre snapshots.
 
 + **Rendiment i rapidesa**:
@@ -1975,7 +1975,7 @@ Aquesta estratègia és adequada per a una startup perquè equilibra eficiència
   - La coexistència de snapshots incrementals i backups complets cobreix tant recuperacions puntuals com desastres totals.
   - La política de retenció evita creixement descontrolat del sistema.
 
-### Aplicació del principi 3-2-1: On s’emmagatzemen els backups? Quantes còpies hi ha?
+### Aplicació del principi 3-2-1: On s'emmagatzemen els backups? Quantes còpies hi ha?
 
 + **Ubicació dels backups**:
 
@@ -1997,7 +1997,7 @@ Aquesta estratègia és adequada per a una startup perquè equilibra eficiència
     - On-site (Físic): disc extern o servidor remot fora de la ubicació principal -> utilitzat per als backups complets setmanals (`/weekly-backups`).
     - Off-site (Núvol): infraestructura cloud -> utilitzada per als backups complets mensuals (`/monthly-backups`).
 
-Aquesta distribució permet diversificar els suports d’emmagatzematge i reduir el risc de pèrdua total de dades.
+Aquesta distribució permet diversificar els suports d'emmagatzematge i reduir el risc de pèrdua total de dades.
 
 **Arquitectura d'emmagatzematge i planificació de la capacitat**
 
@@ -2572,7 +2572,17 @@ Instruccions d'ús:
 
 > Nota: Aquest script està pensat per a un deployment ràpid amb scripts individuals prèviament testejats i amb controls d'errors propis. L'script full-deployment.sh com a tal no implementa control d'errors entre execucions. Si algun dels scripts fallen, el procés continuarà amb el següent. Es recomana revisar la sortida de cada script per validar que el desplegament s'ha completat correctament.
 
-Reflexió Eusebiu Boloc
+### Week 6
+
+## Reflexió Alex Radu ##
+
+L'aspecte més exigent d'aquest projecte ha estat la Week 3: el testeig dels límits de recursos (CPU). Aquests són uns tests més abstractes que la resta i els considero els més complexos de tota la Pràctica 1. La dificultat ve de dissenyar un escenari de prova que realment porti el sistema al límit de forma controlada, és a dir, quan testejava, si exagerava i utilitzava uns límits molt restrictius acabava amb el Recovery Mode de Linux. Per tant, ha sigut, amb diferència, el testeig més tediós i estressant de realitzar.
+
+Si hagués de tornar a començar, canviaria l'estratègia i la manera com ens organitzem les tasques. Arribar a l'últim dia i adonar-nos que hem fet el mateix codi dues vegades no és la millor estratègia...
+
+Sincerament, diria que la part que més m'ha agradat és la lògica del backup i la recerca d'una estratègia viable i el més funcional possible (dins de la franja de temps de desenvolupament de què disposàvem) per fer el backup. En general, la pràctica m'ha fet consolidar molt més els coneixements de scripting limitats que havia après fins al moment a la carrera i, a pesar que ha sigut molta feina, s'ha sentit assequible amb l'organització setmanal del treball i inclús l'he gaudit a la seva manera com un repte que volia superar.
+
+## Reflexió Eusebiu Boloc ##
 
 L'aspecte més exigent d'aquest projecte ha estat, sense dubte, la validació i el testeig dels límits de recursos (PAM i CPU). No n'hi ha prou amb escriure una línia de configuració en un fitxer; el veritable repte és dissenyar un escenari de prova que realment porti el sistema al límit de forma controlada. Entendre per què un procés fallava en intentar obrir fitxers o per què el kernel bloquejava la memòria m'ha obligat a aprofundir en conceptes que no tenia presents.
 
