@@ -2571,3 +2571,13 @@ Instruccions d'ús:
    sudo ./full-deployment.sh
 
 > Nota: Aquest script està pensat per a un deployment ràpid amb scripts individuals prèviament testejats i amb controls d'errors propis. L'script full-deployment.sh com a tal no implementa control d'errors entre execucions. Si algun dels scripts fallen, el procés continuarà amb el següent. Es recomana revisar la sortida de cada script per validar que el desplegament s'ha completat correctament.
+
+Reflexió Eusebiu Boloc
+
+L'aspecte més exigent d'aquest projecte ha estat, sense dubte, la validació i el testeig dels límits de recursos (PAM i CPU). No n'hi ha prou amb escriure una línia de configuració en un fitxer; el veritable repte és dissenyar un escenari de prova que realment porti el sistema al límit de forma controlada. Entendre per què un procés fallava en intentar obrir fitxers o per què el kernel bloquejava la memòria m'ha obligat a aprofundir en conceptes que no tenia presents.
+
+Si hagués de tornar a començar, canviaria l'estratègia i les eines per a la validació de límits. Durant el projecte, un dels punts on vaig trobar més dificultats va ser aconseguir que les proves d'estrès fossin 100% precises; tot i que els scripts de test actuals funcionen, vaig haver de conformar-me amb els resultats obtinguts després de molts intents fallits.
+
+Aquest projecte m'ha obert els ulls a la complexitat inherent a l'administració de sistemes. Abans pensava que un SysAdmin només instal·lava paquets i creava usuaris; ara entenc que la feina real consisteix a preveure el desastre. He après que cal pensar en totes les possibilitats d'error: des d'un usuari que satura la CPU per accident fins a un backup que falla per falta de permisos. L'administració de sistemes no és només fer que les coses funcionin, sinó assegurar que segueixin funcionant sota qualsevol circumstància.
+
+M'ha despertat curiositat el món de la Ciberseguretat i el Hardening de sistemes. M'agradaria aprendre més sobre com blindar el servidor davant d'atacs externs o interns. Després de veure com de fàcil pot ser col·lapsar un sistema si no té límits ben definits, vull aprofundir en les tècniques que fan que un entorn de producció sigui realment inexpugnable.
