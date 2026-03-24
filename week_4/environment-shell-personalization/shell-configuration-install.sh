@@ -35,5 +35,5 @@ if id -nG "$USER" | grep -qw "greendevcorp"; then
 fi
 EOF
     # Lectura per als membres del grup, escriptura només per root
-    sudo chmod 640 /etc/profile.d/greendevcorp-shell-configuration.sh
+    sudo chmod 644 /etc/profile.d/greendevcorp-shell-configuration.sh
 fi
