@@ -2486,7 +2486,7 @@ Instruccions d'ús:
 
 3. Segueix els indicadors de pantalla per seleccionar el disc detectat per la VM.
 
-### full-deployment.sh
+## full-deployment.sh
 
 L'script full-deployment.sh té com a finalitat automatitzar el desplegament complet de tots els components del sistema desenvolupats al llarg de les diferents setmanes del projecte. Executa de forma seqüencial tots els scripts d'instal·lació i configuració, assegurant una posada en marxa homogènia i sense intervenció manual.
 
@@ -2502,6 +2502,18 @@ Funcionalitats Implementades:
 
   - Navegació per estructura de projecte: Utilitza canvis de directori (cd) per accedir a cada mòdul abans d'executar els scripts corresponents.
 
+  - Permisos necessaris: ens assegurem que els scripts a executar tinguin permisos d'execució
+
++ Configuració del Sistema (week_1):
+
+  - Privilegis i Seguretat: Executa basig-config-root.sh per crear administradors principals, instal·lar els paquets bàsics i una configuració de seguretat inicial mínima.
+
+  - Entorn d'Usuari Base: Mitjançant basic-config-user.sh, s'instal·len altres paquets necessaris i s'acaba de configurar la seguretat d'ssh.
+
+  - Estructura Inicial: Llança una primera versió de directory-structure.sh per crear els fonaments del sistema de fitxers.
+
+  - Auditoria de Post-Instal·lació: Executa setup-verification.sh, un script de control que comprova que els paquets base i les configuracions de xarxa s'han aplicat correctament abans de procedir a les setmanes següents.
+
 + Configuració del Sistema de Logs (week_2/journald):
 
   - Instal·lació de consultes journald: Executa journald-install-querys.sh per habilitar eines de consulta de logs.
@@ -2509,6 +2521,10 @@ Funcionalitats Implementades:
   - Configuració del sistema journald: Executa journald-system-conf.sh per ajustar paràmetres del sistema de logs.
 
   - Integració amb logrotate: Executa logrotate-install.sh per gestionar la rotació i persistència dels logs.
+
++ Desplegament de Serveid de Backup (week_2):
+
+  - Instal·lació de configuracions de backup: Executa backup-setup.sh per configurar un backup diari automàtic.
 
 + Desplegament de Serveis Web (week_2/nginx):
 
@@ -2526,11 +2542,15 @@ Funcionalitats Implementades:
 
   - Estructura de directoris: Executa directory-structure.sh per establir l'organització del sistema de fitxers.
 
+  - Restriccions de Seguretat (PAM): Executa resource-limits.sh. Aquest pas és vital per protegir el kernel de l'esgotament de recursos just després de crear la jerarquia d'usuaris.
+
 + Personalització de l'Entorn Shell:
 
   - Configuració de l'entorn d'usuari: Executa shell-configuration-install.sh per configurar la shell dels integrants del grup greendevcorp. L'script té dependencies amb user-group-structure.sh per el seu funcionament correcte.
 
 + Desplegament del Sistema de Backups (week_5):
+
+  - Preparació del Hardware: Executa storage-setup.sh per preparar el disc secundari, formatar-lo i garantir el muntatge via UUID al fitxer /etc/fstab.
 
   - Instal·lació completa del sistema de còpies de seguretat mitjançant install-backup-system.sh.
 
