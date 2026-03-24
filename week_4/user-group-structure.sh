@@ -6,7 +6,7 @@
 # ==============================================================================
 
 # Verifiquem si l'usuari és root (EUID 0). Crear usuaris requereix permisos totals.
- [[ $EUID -ne 0 ]]; then
+if [[ $EUID -ne 0 ]]; then
    echo "[!] Aquest script s'ha d'executar com a root (fent servir sudo)."
    exit 1
 fi
