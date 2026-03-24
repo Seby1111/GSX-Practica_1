@@ -2550,8 +2550,6 @@ Funcionalitats Implementades:
 
 + Desplegament del Sistema de Backups (week_5):
 
-  - Preparació del Hardware: Executa storage-setup.sh per preparar el disc secundari, formatar-lo i garantir el muntatge via UUID al fitxer /etc/fstab.
-
   - Instal·lació completa del sistema de còpies de seguretat mitjançant install-backup-system.sh.
 
 + Execució amb privilegis elevats:

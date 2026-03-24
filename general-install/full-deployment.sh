@@ -68,6 +68,4 @@ cd ../../week_5
 
 chmod +x *.sh
 
-sudo ./storage-setup.sh
-
 sudo ./install-backup-system.sh
