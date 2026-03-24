@@ -2007,13 +2007,15 @@ Cal tindre en compte que la integritat de les dades ja es contempla amb la polí
 
 + Arquitectura d'emmagatzematge:
 
-    - **Emmagatzematge Local**: Situat al disc del servidor principal, utilitzat per als snapshots incrementals diaris (`/daily-backups`). Prioritza la velocitat d’accés i la recuperació immediata de dades recents.
-    - **Emmagatzematge On-site (Físic)**: Disc extern o servidor proper dins de la mateixa infraestructura, utilitzat per als backups complets setmanals (`/weekly-backups`). Proporciona una còpia independent del sistema principal per protegir davant fallades locals.
-    - **Emmagatzematge Off-site (Núvol)**: Infraestructura cloud utilitzada per als backups complets mensuals (`/monthly-backups`). Orientada a la recuperació davant desastres greus i a la conservació a llarg termini.
+  L'arquitectura d'emmagatzematge s'ha pensat per a que l'usuari pugue separar el Sistema Operatiu de les Dades d'Usuari:
+
+    + Disc Principal (/dev/sda): Conté el SO i les configuracions. Es manté el més net possible per facilitar clonacions o migracions.
+
+    + Disc de Dades (/dev/sdb1): Gestionat per l'script storage-setup.sh.
 
 + Planificació de Capacitat:
 
-    - S'ha establert una quota de memòria virtual per usuari de 200MB per evitar l'esgotament del disc per fitxers temporals.
+    - S'ha establert una quota de memòria virtual per usuari de 2GB per evitar l'esgotament del disc per fitxers temporals.
 
     - Es recomana un monitoratge setmanal de l'espai lliure (df -h) per preveure l'ampliació del disc secundari abans que arribi al 90% d'ocupació.
 
