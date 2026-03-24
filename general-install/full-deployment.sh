@@ -6,7 +6,7 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-cd week_2/journald
+cd ../week_2/journald
 
 sudo ./journald-install-querys.sh
 
